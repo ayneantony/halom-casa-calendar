@@ -38,9 +38,14 @@ input,textarea,button{
   box-sizing:border-box;
 }
 
-button{ cursor:pointer; }
+button{
+  cursor:pointer;
+}
 
-#calendar{ max-width:1000px; margin:auto; }
+#calendar{
+  max-width:1000px;
+  margin:auto;
+}
 
 /* MODAL */
 .modal{
@@ -61,7 +66,7 @@ button{ cursor:pointer; }
   border-radius:10px;
 }
 
-/* Calendar borders */
+/* Calendar grid fix */
 .fc-theme-standard td,
 .fc-theme-standard th {
   border: 1.5px solid #444 !important;
@@ -71,11 +76,14 @@ button{ cursor:pointer; }
   border: 2px solid #222 !important;
 }
 
-/* GREY BLOCKED DATES */
-.blocked-date {
-  background: #dcdcdc !important;
-  opacity: 0.6 !important;
-  pointer-events: none !important;
+.fc .fc-daygrid-day {
+  border: 1px solid #555 !important;
+}
+
+.fc .fc-col-header-cell {
+  background: #f0f0f0;
+  font-weight: bold;
+  border: 1.5px solid #333 !important;
 }
 </style>
 </head>
@@ -101,7 +109,7 @@ button{ cursor:pointer; }
 <div id="calendar"></div>
 </div>
 
-<!-- BOOKING -->
+<!-- BOOKING MODAL -->
 <div id="bookingModal" class="modal">
   <div class="modal-content">
     <h3>Block Date</h3>
@@ -112,7 +120,7 @@ button{ cursor:pointer; }
   </div>
 </div>
 
-<!-- VIEW -->
+<!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
   <div class="modal-content">
     <h3>Booking Details</h3>
@@ -124,190 +132,139 @@ button{ cursor:pointer; }
   </div>
 </div>
 
-<!-- FIREBASE -->
+<!-- 🔥 FIREBASE (CDN VERSION - FIXED) -->
 <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
-  authDomain: "halom-casa-booking-calendar.firebaseapp.com",
-  projectId: "halom-casa-booking-calendar",
-  storageBucket: "halom-casa-booking-calendar.firebasestorage.app",
-  messagingSenderId: "171254486073",
-  appId: "1:171254486073:web:d1ea9a603c5b33d602a9e8"
-};
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+  let calendar;
+  let selectedDate = null;
+  let selectedDoc = null;
 
-let calendar;
-let selectedDate = null;
-let selectedDoc = null;
-let bookedDates = [];
-
-/* MODAL */
-function openModal(id){
-  document.getElementById(id).style.display='flex';
-}
-function closeModal(id){
-  document.getElementById(id).style.display='none';
-}
-
-window.closeBooking = () => closeModal('bookingModal');
-window.closeView = () => closeModal('viewModal');
-
-/* LOGIN */
-document.getElementById('loginBtn').onclick = async () => {
-  try{
-    await signInWithEmailAndPassword(auth,email.value,password.value);
-  }catch(e){
-    loginMsg.innerText = e.message;
+  function openModal(id){
+    document.getElementById(id).style.display='flex';
   }
-};
-
-logoutBtn.onclick = () => signOut(auth);
-
-/* AUTH */
-onAuthStateChanged(auth, async user=>{
-  if(user){
-    loginBox.style.display='none';
-    calendarContainer.style.display='block';
-    logoutBtn.style.display='block';
-    initCalendar();
-  }else{
-    loginBox.style.display='block';
-    calendarContainer.style.display='none';
-    logoutBtn.style.display='none';
+  function closeModal(id){
+    document.getElementById(id).style.display='none';
   }
-});
 
-/* CALENDAR */
-function initCalendar(){
-  calendar = new FullCalendar.Calendar(document.getElementById('calendar'),{
+  window.closeBooking = () => closeModal('bookingModal');
+  window.closeView = () => closeModal('viewModal');
 
-    initialView:'dayGridMonth',
+  document.getElementById('loginBtn').onclick = async () => {
+    try{
+      await signInWithEmailAndPassword(auth,email.value,password.value);
+    }catch(e){
+      loginMsg.innerText = e.message;
+    }
+  };
 
-    dateClick(info){
-      const clicked = info.dateStr;
+  logoutBtn.onclick = () => signOut(auth);
 
-      if(bookedDates.includes(clicked)){
-        alert("❌ Already booked!");
-        return;
-      }
-
-      selectedDate = clicked;
-      openModal('bookingModal');
-    },
-
-    eventClick(info){
-      const e = info.event.extendedProps;
-      selectedDoc = e.docId;
-
-      vDate.innerText = info.event.startStr;
-      vGuest.innerText = e.guestName;
-      vNotes.innerText = e.notes || "No notes";
-
-      openModal('viewModal');
+  onAuthStateChanged(auth, async user=>{
+    if(user){
+      loginBox.style.display='none';
+      calendarContainer.style.display='block';
+      logoutBtn.style.display='block';
+      initCalendar();
+    }else{
+      loginBox.style.display='block';
+      calendarContainer.style.display='none';
+      logoutBtn.style.display='none';
     }
   });
 
-  calendar.render();
-  loadBookings();
-}
+  function initCalendar(){
+    calendar = new FullCalendar.Calendar(document.getElementById('calendar'),{
+      initialView:'dayGridMonth',
 
-/* LOAD BOOKINGS */
-async function loadBookings(){
-  const snap = await getDocs(collection(db,'blockedDates'));
+      dateClick(info){
+        selectedDate = info.dateStr;
+        openModal('bookingModal');
+      },
 
-  bookedDates = [];
+      eventClick(info){
+        const e = info.event.extendedProps;
+        selectedDoc = e.docId;
 
-  snap.forEach(d=>{
-    const data = d.data();
+        vDate.innerText = info.event.startStr;
+        vGuest.innerText = e.guestName;
+        vNotes.innerText = e.notes || "No notes";
 
-    bookedDates.push(data.date);
-
-    calendar.addEvent({
-      title: data.guestName,
-      start: data.date,
-      color: '#d9534f',
-      allDay: true,
-      extendedProps:{
-        docId:d.id,
-        guestName:data.guestName,
-        notes:data.notes,
-        ownerId:data.ownerId
+        openModal('viewModal');
       }
     });
-  });
 
-  applyBlockedStyles();
-}
+    calendar.render();
+    loadBookings();
+  }
 
-/* GREY DATES */
-function applyBlockedStyles(){
-  setTimeout(()=>{
-    document.querySelectorAll('.fc-daygrid-day').forEach(cell=>{
-      const date = cell.getAttribute('data-date');
-      if(bookedDates.includes(date)){
-        cell.classList.add('blocked-date');
-      }
+  async function loadBookings(){
+    const snap = await getDocs(collection(db,'blockedDates'));
+
+    snap.forEach(d=>{
+      const data = d.data();
+
+      calendar.addEvent({
+        title: data.guestName || 'Blocked',
+        start: data.date,
+        color: 'red',
+        allDay: true,
+        docId: d.id,
+        guestName: data.guestName,
+        notes: data.notes
+      });
     });
-  },200);
-}
-
-/* SAVE */
-document.getElementById('saveBooking').onclick = async () => {
-
-  let name = guestName.value;
-  let note = notes.value;
-
-  if(!name){
-    alert("Enter name");
-    return;
   }
 
-  if(bookedDates.includes(selectedDate)){
-    alert("❌ Already booked");
-    return;
-  }
+  document.getElementById('saveBooking').onclick = async () => {
 
-  await addDoc(collection(db,'blockedDates'),{
-    date:selectedDate,
-    guestName:name,
-    notes:note || "",
-    ownerId:auth.currentUser.uid
-  });
+    let name = document.getElementById('guestName').value;
+    let note = document.getElementById('notes').value;
 
-  closeBooking();
-  calendar.removeAllEvents();
-  loadBookings();
-};
+    if(!name){
+      alert("Enter guest name");
+      return;
+    }
 
-/* UNBLOCK ONLY OWNER */
-unblockBtn.onclick = async () => {
+    await addDoc(collection(db,'blockedDates'),{
+      date: selectedDate,
+      guestName: name,
+      notes: note || ""
+    });
 
-  const snap = await getDocs(collection(db,'blockedDates'));
+    closeBooking();
+    calendar.removeAllEvents();
+    loadBookings();
+  };
 
-  snap.forEach(async d=>{
-    const data = d.data();
+  unblockBtn.onclick = async () => {
+    const snap = await getDocs(collection(db,'blockedDates'));
 
-    if(d.id === selectedDoc){
-      if(data.ownerId === auth.currentUser.uid){
+    snap.forEach(async d=>{
+      if(d.id === selectedDoc){
         await deleteDoc(doc(db,'blockedDates',d.id));
-      }else{
-        alert("❌ Not allowed");
       }
-    }
-  });
+    });
 
-  closeView();
-  calendar.removeAllEvents();
-  loadBookings();
-};
+    closeView();
+    calendar.removeAllEvents();
+    loadBookings();
+  };
 
 </script>
 
