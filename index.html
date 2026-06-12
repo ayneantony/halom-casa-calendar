@@ -66,7 +66,7 @@ button{
   border-radius:10px;
 }
 
-/* Calendar grid fix */
+/* calendar borders */
 .fc-theme-standard td,
 .fc-theme-standard th {
   border: 1.5px solid #444 !important;
@@ -84,6 +84,13 @@ button{
   background: #f0f0f0;
   font-weight: bold;
   border: 1.5px solid #333 !important;
+}
+
+/* 🔥 GREY BLOCKED STYLE */
+.blocked-date {
+  background: #dcdcdc !important;
+  opacity: 0.6 !important;
+  pointer-events: none !important;
 }
 </style>
 </head>
@@ -132,139 +139,192 @@ button{
   </div>
 </div>
 
-<!-- 🔥 FIREBASE (CDN VERSION - FIXED) -->
+<!-- FIREBASE -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
 
-  let calendar;
-  let selectedDate = null;
-  let selectedDoc = null;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-  function openModal(id){
-    document.getElementById(id).style.display='flex';
+let calendar;
+let selectedDate = null;
+let selectedDoc = null;
+let bookedDates = [];
+
+/* MODALS */
+function openModal(id){
+  document.getElementById(id).style.display='flex';
+}
+function closeModal(id){
+  document.getElementById(id).style.display='none';
+}
+
+window.closeBooking = () => closeModal('bookingModal');
+window.closeView = () => closeModal('viewModal');
+
+/* LOGIN */
+document.getElementById('loginBtn').onclick = async () => {
+  try{
+    await signInWithEmailAndPassword(auth,email.value,password.value);
+  }catch(e){
+    loginMsg.innerText = e.message;
   }
-  function closeModal(id){
-    document.getElementById(id).style.display='none';
+};
+
+logoutBtn.onclick = () => signOut(auth);
+
+/* AUTH */
+onAuthStateChanged(auth, async user=>{
+  if(user){
+    loginBox.style.display='none';
+    calendarContainer.style.display='block';
+    logoutBtn.style.display='block';
+    initCalendar();
+  }else{
+    loginBox.style.display='block';
+    calendarContainer.style.display='none';
+    logoutBtn.style.display='none';
   }
+});
 
-  window.closeBooking = () => closeModal('bookingModal');
-  window.closeView = () => closeModal('viewModal');
+/* CALENDAR */
+function initCalendar(){
+  calendar = new FullCalendar.Calendar(document.getElementById('calendar'),{
 
-  document.getElementById('loginBtn').onclick = async () => {
-    try{
-      await signInWithEmailAndPassword(auth,email.value,password.value);
-    }catch(e){
-      loginMsg.innerText = e.message;
-    }
-  };
+    initialView:'dayGridMonth',
 
-  logoutBtn.onclick = () => signOut(auth);
+    dateClick(info){
 
-  onAuthStateChanged(auth, async user=>{
-    if(user){
-      loginBox.style.display='none';
-      calendarContainer.style.display='block';
-      logoutBtn.style.display='block';
-      initCalendar();
-    }else{
-      loginBox.style.display='block';
-      calendarContainer.style.display='none';
-      logoutBtn.style.display='none';
+      const clicked = info.dateStr;
+
+      if(bookedDates.includes(clicked)){
+        alert("❌ This date is already booked!");
+        return;
+      }
+
+      selectedDate = clicked;
+      openModal('bookingModal');
+    },
+
+    eventClick(info){
+      const e = info.event.extendedProps;
+      selectedDoc = e.docId;
+
+      vDate.innerText = info.event.startStr;
+      vGuest.innerText = e.guestName;
+      vNotes.innerText = e.notes || "No notes";
+
+      openModal('viewModal');
     }
   });
 
-  function initCalendar(){
-    calendar = new FullCalendar.Calendar(document.getElementById('calendar'),{
-      initialView:'dayGridMonth',
+  calendar.render();
+  loadBookings();
+}
 
-      dateClick(info){
-        selectedDate = info.dateStr;
-        openModal('bookingModal');
-      },
+/* LOAD BOOKINGS */
+async function loadBookings(){
+  const snap = await getDocs(collection(db,'blockedDates'));
 
-      eventClick(info){
-        const e = info.event.extendedProps;
-        selectedDoc = e.docId;
+  bookedDates = [];
 
-        vDate.innerText = info.event.startStr;
-        vGuest.innerText = e.guestName;
-        vNotes.innerText = e.notes || "No notes";
+  snap.forEach(d=>{
+    const data = d.data();
 
-        openModal('viewModal');
-      }
-    });
+    bookedDates.push(data.date);
 
-    calendar.render();
-    loadBookings();
-  }
-
-  async function loadBookings(){
-    const snap = await getDocs(collection(db,'blockedDates'));
-
-    snap.forEach(d=>{
-      const data = d.data();
-
-      calendar.addEvent({
-        title: data.guestName || 'Blocked',
-        start: data.date,
-        color: 'red',
-        allDay: true,
+    calendar.addEvent({
+      title: data.guestName || 'Blocked',
+      start: data.date,
+      color: '#d9534f',
+      allDay: true,
+      extendedProps: {
         docId: d.id,
         guestName: data.guestName,
-        notes: data.notes
-      });
-    });
-  }
-
-  document.getElementById('saveBooking').onclick = async () => {
-
-    let name = document.getElementById('guestName').value;
-    let note = document.getElementById('notes').value;
-
-    if(!name){
-      alert("Enter guest name");
-      return;
-    }
-
-    await addDoc(collection(db,'blockedDates'),{
-      date: selectedDate,
-      guestName: name,
-      notes: note || ""
-    });
-
-    closeBooking();
-    calendar.removeAllEvents();
-    loadBookings();
-  };
-
-  unblockBtn.onclick = async () => {
-    const snap = await getDocs(collection(db,'blockedDates'));
-
-    snap.forEach(async d=>{
-      if(d.id === selectedDoc){
-        await deleteDoc(doc(db,'blockedDates',d.id));
+        notes: data.notes,
+        ownerId: data.ownerId
       }
     });
+  });
 
-    closeView();
-    calendar.removeAllEvents();
-    loadBookings();
-  };
+  applyBlockedStyles();
+}
+
+/* GREY OUT DATES */
+function applyBlockedStyles(){
+  setTimeout(() => {
+    document.querySelectorAll('.fc-daygrid-day').forEach(cell => {
+      const date = cell.getAttribute('data-date');
+
+      if(bookedDates.includes(date)){
+        cell.classList.add('blocked-date');
+      }
+    });
+  }, 200);
+}
+
+/* SAVE BOOKING */
+document.getElementById('saveBooking').onclick = async () => {
+
+  let name = document.getElementById('guestName').value;
+  let note = document.getElementById('notes').value;
+
+  if(!name){
+    alert("Enter guest name");
+    return;
+  }
+
+  if(bookedDates.includes(selectedDate)){
+    alert("❌ Already booked!");
+    return;
+  }
+
+  await addDoc(collection(db,'blockedDates'),{
+    date: selectedDate,
+    guestName: name,
+    notes: note || "",
+    ownerId: auth.currentUser.uid
+  });
+
+  closeBooking();
+  calendar.removeAllEvents();
+  loadBookings();
+};
+
+/* UNBLOCK (ONLY OWNER) */
+unblockBtn.onclick = async () => {
+
+  const snap = await getDocs(collection(db,'blockedDates'));
+
+  snap.forEach(async d=>{
+    const data = d.data();
+
+    if(d.id === selectedDoc){
+      if(data.ownerId === auth.currentUser.uid){
+        await deleteDoc(doc(db,'blockedDates', d.id));
+      }else{
+        alert("❌ You cannot delete this booking!");
+      }
+    }
+  });
+
+  closeView();
+  calendar.removeAllEvents();
+  loadBookings();
+};
 
 </script>
 
