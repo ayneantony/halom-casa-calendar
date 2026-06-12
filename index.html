@@ -66,7 +66,7 @@ button{
   border-radius:10px;
 }
 
-/* 🔥 STRONGER CALENDAR GRID */
+/* Calendar grid fix */
 .fc-theme-standard td,
 .fc-theme-standard th {
   border: 1.5px solid #444 !important;
@@ -84,10 +84,6 @@ button{
   background: #f0f0f0;
   font-weight: bold;
   border: 1.5px solid #333 !important;
-}
-
-.fc .fc-daygrid-day:hover {
-  background: rgba(0,0,0,0.05);
 }
 </style>
 </head>
@@ -136,146 +132,139 @@ button{
   </div>
 </div>
 
+<!-- 🔥 FIREBASE (CDN VERSION - FIXED) -->
 <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
-  authDomain: "halom-casa-booking-calendar.firebaseapp.com",
-  projectId: "halom-casa-booking-calendar",
-  storageBucket: "halom-casa-booking-calendar.firebasestorage.app",
-  messagingSenderId: "171254486073",
-  appId: "1:171254486073:web:d1ea9a603c5b33d602a9e8"
-};
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+  let calendar;
+  let selectedDate = null;
+  let selectedDoc = null;
 
-let calendar;
-let selectedDate = null;
-let selectedDoc = null;
+  function openModal(id){
+    document.getElementById(id).style.display='flex';
+  }
+  function closeModal(id){
+    document.getElementById(id).style.display='none';
+  }
 
-/* MODAL CONTROL */
-function openModal(id){
-  document.getElementById(id).style.display='flex';
-}
-function closeModal(id){
-  document.getElementById(id).style.display='none';
-}
+  window.closeBooking = () => closeModal('bookingModal');
+  window.closeView = () => closeModal('viewModal');
 
-window.closeBooking = () => closeModal('bookingModal');
-window.closeView = () => closeModal('viewModal');
+  document.getElementById('loginBtn').onclick = async () => {
+    try{
+      await signInWithEmailAndPassword(auth,email.value,password.value);
+    }catch(e){
+      loginMsg.innerText = e.message;
+    }
+  };
 
-/* LOGIN */
-document.getElementById('loginBtn').onclick = async () => {
- try{
-  await signInWithEmailAndPassword(auth,email.value,password.value);
- }catch(e){
-  loginMsg.innerText = e.message;
- }
-};
+  logoutBtn.onclick = () => signOut(auth);
 
-logoutBtn.onclick = () => signOut(auth);
+  onAuthStateChanged(auth, async user=>{
+    if(user){
+      loginBox.style.display='none';
+      calendarContainer.style.display='block';
+      logoutBtn.style.display='block';
+      initCalendar();
+    }else{
+      loginBox.style.display='block';
+      calendarContainer.style.display='none';
+      logoutBtn.style.display='none';
+    }
+  });
 
-/* AUTH */
-onAuthStateChanged(auth, async user=>{
- if(user){
-   loginBox.style.display='none';
-   calendarContainer.style.display='block';
-   logoutBtn.style.display='block';
-   initCalendar();
- }else{
-   loginBox.style.display='block';
-   calendarContainer.style.display='none';
-   logoutBtn.style.display='none';
- }
-});
+  function initCalendar(){
+    calendar = new FullCalendar.Calendar(document.getElementById('calendar'),{
+      initialView:'dayGridMonth',
 
-/* CALENDAR */
-function initCalendar(){
- calendar = new FullCalendar.Calendar(document.getElementById('calendar'),{
-   initialView:'dayGridMonth',
+      dateClick(info){
+        selectedDate = info.dateStr;
+        openModal('bookingModal');
+      },
 
-   dateClick(info){
-     selectedDate = info.dateStr;
-     openModal('bookingModal');
-   },
+      eventClick(info){
+        const e = info.event.extendedProps;
+        selectedDoc = e.docId;
 
-   eventClick(info){
-     const e = info.event.extendedProps;
-     selectedDoc = e.docId;
+        vDate.innerText = info.event.startStr;
+        vGuest.innerText = e.guestName;
+        vNotes.innerText = e.notes || "No notes";
 
-     vDate.innerText = info.event.startStr;
-     vGuest.innerText = e.guestName;
-     vNotes.innerText = e.notes || "No notes";
+        openModal('viewModal');
+      }
+    });
 
-     openModal('viewModal');
-   }
- });
+    calendar.render();
+    loadBookings();
+  }
 
- calendar.render();
- loadBookings();
-}
+  async function loadBookings(){
+    const snap = await getDocs(collection(db,'blockedDates'));
 
-/* LOAD BOOKINGS */
-async function loadBookings(){
- const snap = await getDocs(collection(db,'blockedDates'));
+    snap.forEach(d=>{
+      const data = d.data();
 
- snap.forEach(d=>{
-   const data = d.data();
+      calendar.addEvent({
+        title: data.guestName || 'Blocked',
+        start: data.date,
+        color: 'red',
+        allDay: true,
+        docId: d.id,
+        guestName: data.guestName,
+        notes: data.notes
+      });
+    });
+  }
 
-   calendar.addEvent({
-     title: data.guestName || 'Blocked',
-     start: data.date,
-     color: 'red',
-     allDay: true,
-     docId: d.id,
-     guestName: data.guestName,
-     notes: data.notes
-   });
- });
-}
+  document.getElementById('saveBooking').onclick = async () => {
 
-/* SAVE BOOKING */
-document.getElementById('saveBooking').onclick = async () => {
+    let name = document.getElementById('guestName').value;
+    let note = document.getElementById('notes').value;
 
- let name = document.getElementById('guestName').value;
- let note = document.getElementById('notes').value;
+    if(!name){
+      alert("Enter guest name");
+      return;
+    }
 
- if(!name){
-   alert("Enter guest name");
-   return;
- }
+    await addDoc(collection(db,'blockedDates'),{
+      date: selectedDate,
+      guestName: name,
+      notes: note || ""
+    });
 
- await addDoc(collection(db,'blockedDates'),{
-   date: selectedDate,
-   guestName: name,
-   notes: note || ""
- });
+    closeBooking();
+    calendar.removeAllEvents();
+    loadBookings();
+  };
 
- closeBooking();
- calendar.removeAllEvents();
- loadBookings();
-};
+  unblockBtn.onclick = async () => {
+    const snap = await getDocs(collection(db,'blockedDates'));
 
-/* UNBLOCK */
-unblockBtn.onclick = async () => {
- const snap = await getDocs(collection(db,'blockedDates'));
+    snap.forEach(async d=>{
+      if(d.id === selectedDoc){
+        await deleteDoc(doc(db,'blockedDates',d.id));
+      }
+    });
 
- snap.forEach(async d=>{
-   if(d.id === selectedDoc){
-     await deleteDoc(doc(db,'blockedDates',d.id));
-   }
- });
-
- closeView();
- calendar.removeAllEvents();
- loadBookings();
-};
+    closeView();
+    calendar.removeAllEvents();
+    loadBookings();
+  };
 
 </script>
 
