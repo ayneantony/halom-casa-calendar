@@ -47,7 +47,7 @@ button{
   margin:auto;
 }
 
-/* MODAL FIX */
+/* MODAL */
 .modal{
   display:none;
   position:fixed;
@@ -64,6 +64,30 @@ button{
   max-width:450px;
   padding:20px;
   border-radius:10px;
+}
+
+/* 🔥 STRONGER CALENDAR GRID */
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border: 1.5px solid #444 !important;
+}
+
+.fc .fc-scrollgrid {
+  border: 2px solid #222 !important;
+}
+
+.fc .fc-daygrid-day {
+  border: 1px solid #555 !important;
+}
+
+.fc .fc-col-header-cell {
+  background: #f0f0f0;
+  font-weight: bold;
+  border: 1.5px solid #333 !important;
+}
+
+.fc .fc-daygrid-day:hover {
+  background: rgba(0,0,0,0.05);
 }
 </style>
 </head>
@@ -116,15 +140,15 @@ button{
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
-  authDomain: "halom-casa-booking-calendar.firebaseapp.com",
-  projectId: "halom-casa-booking-calendar",
-  storageBucket: "halom-casa-booking-calendar.firebasestorage.app",
-  messagingSenderId: "171254486073",
-  appId: "1:171254486073:web:d1ea9a603c5b33d602a9e8"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_BUCKET",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -135,7 +159,7 @@ let calendar;
 let selectedDate = null;
 let selectedDoc = null;
 
-/* MODAL FUNCTIONS */
+/* MODAL CONTROL */
 function openModal(id){
   document.getElementById(id).style.display='flex';
 }
@@ -157,7 +181,7 @@ document.getElementById('loginBtn').onclick = async () => {
 
 logoutBtn.onclick = () => signOut(auth);
 
-/* AUTH STATE */
+/* AUTH */
 onAuthStateChanged(auth, async user=>{
  if(user){
    loginBox.style.display='none';
@@ -187,7 +211,7 @@ function initCalendar(){
 
      vDate.innerText = info.event.startStr;
      vGuest.innerText = e.guestName;
-     vNotes.innerText = e.notes;
+     vNotes.innerText = e.notes || "No notes";
 
      openModal('viewModal');
    }
@@ -219,8 +243,8 @@ async function loadBookings(){
 /* SAVE BOOKING */
 document.getElementById('saveBooking').onclick = async () => {
 
- let name = guestName.value;
- let note = notes.value;
+ let name = document.getElementById('guestName').value;
+ let note = document.getElementById('notes').value;
 
  if(!name){
    alert("Enter guest name");
@@ -230,7 +254,7 @@ document.getElementById('saveBooking').onclick = async () => {
  await addDoc(collection(db,'blockedDates'),{
    date: selectedDate,
    guestName: name,
-   notes: note
+   notes: note || ""
  });
 
  closeBooking();
