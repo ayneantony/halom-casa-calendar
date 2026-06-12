@@ -38,14 +38,9 @@ input,textarea,button{
   box-sizing:border-box;
 }
 
-button{
-  cursor:pointer;
-}
+button{ cursor:pointer; }
 
-#calendar{
-  max-width:1000px;
-  margin:auto;
-}
+#calendar{ max-width:1000px; margin:auto; }
 
 /* MODAL */
 .modal{
@@ -66,7 +61,7 @@ button{
   border-radius:10px;
 }
 
-/* calendar borders */
+/* Calendar borders */
 .fc-theme-standard td,
 .fc-theme-standard th {
   border: 1.5px solid #444 !important;
@@ -76,17 +71,7 @@ button{
   border: 2px solid #222 !important;
 }
 
-.fc .fc-daygrid-day {
-  border: 1px solid #555 !important;
-}
-
-.fc .fc-col-header-cell {
-  background: #f0f0f0;
-  font-weight: bold;
-  border: 1.5px solid #333 !important;
-}
-
-/* 🔥 GREY BLOCKED STYLE */
+/* GREY BLOCKED DATES */
 .blocked-date {
   background: #dcdcdc !important;
   opacity: 0.6 !important;
@@ -116,7 +101,7 @@ button{
 <div id="calendar"></div>
 </div>
 
-<!-- BOOKING MODAL -->
+<!-- BOOKING -->
 <div id="bookingModal" class="modal">
   <div class="modal-content">
     <h3>Block Date</h3>
@@ -127,7 +112,7 @@ button{
   </div>
 </div>
 
-<!-- VIEW MODAL -->
+<!-- VIEW -->
 <div id="viewModal" class="modal">
   <div class="modal-content">
     <h3>Booking Details</h3>
@@ -164,7 +149,7 @@ let selectedDate = null;
 let selectedDoc = null;
 let bookedDates = [];
 
-/* MODALS */
+/* MODAL */
 function openModal(id){
   document.getElementById(id).style.display='flex';
 }
@@ -207,11 +192,10 @@ function initCalendar(){
     initialView:'dayGridMonth',
 
     dateClick(info){
-
       const clicked = info.dateStr;
 
       if(bookedDates.includes(clicked)){
-        alert("❌ This date is already booked!");
+        alert("❌ Already booked!");
         return;
       }
 
@@ -247,15 +231,15 @@ async function loadBookings(){
     bookedDates.push(data.date);
 
     calendar.addEvent({
-      title: data.guestName || 'Blocked',
+      title: data.guestName,
       start: data.date,
       color: '#d9534f',
       allDay: true,
-      extendedProps: {
-        docId: d.id,
-        guestName: data.guestName,
-        notes: data.notes,
-        ownerId: data.ownerId
+      extendedProps:{
+        docId:d.id,
+        guestName:data.guestName,
+        notes:data.notes,
+        ownerId:data.ownerId
       }
     });
   });
@@ -263,40 +247,39 @@ async function loadBookings(){
   applyBlockedStyles();
 }
 
-/* GREY OUT DATES */
+/* GREY DATES */
 function applyBlockedStyles(){
-  setTimeout(() => {
-    document.querySelectorAll('.fc-daygrid-day').forEach(cell => {
+  setTimeout(()=>{
+    document.querySelectorAll('.fc-daygrid-day').forEach(cell=>{
       const date = cell.getAttribute('data-date');
-
       if(bookedDates.includes(date)){
         cell.classList.add('blocked-date');
       }
     });
-  }, 200);
+  },200);
 }
 
-/* SAVE BOOKING */
+/* SAVE */
 document.getElementById('saveBooking').onclick = async () => {
 
-  let name = document.getElementById('guestName').value;
-  let note = document.getElementById('notes').value;
+  let name = guestName.value;
+  let note = notes.value;
 
   if(!name){
-    alert("Enter guest name");
+    alert("Enter name");
     return;
   }
 
   if(bookedDates.includes(selectedDate)){
-    alert("❌ Already booked!");
+    alert("❌ Already booked");
     return;
   }
 
   await addDoc(collection(db,'blockedDates'),{
-    date: selectedDate,
-    guestName: name,
-    notes: note || "",
-    ownerId: auth.currentUser.uid
+    date:selectedDate,
+    guestName:name,
+    notes:note || "",
+    ownerId:auth.currentUser.uid
   });
 
   closeBooking();
@@ -304,7 +287,7 @@ document.getElementById('saveBooking').onclick = async () => {
   loadBookings();
 };
 
-/* UNBLOCK (ONLY OWNER) */
+/* UNBLOCK ONLY OWNER */
 unblockBtn.onclick = async () => {
 
   const snap = await getDocs(collection(db,'blockedDates'));
@@ -314,9 +297,9 @@ unblockBtn.onclick = async () => {
 
     if(d.id === selectedDoc){
       if(data.ownerId === auth.currentUser.uid){
-        await deleteDoc(doc(db,'blockedDates', d.id));
+        await deleteDoc(doc(db,'blockedDates',d.id));
       }else{
-        alert("❌ You cannot delete this booking!");
+        alert("❌ Not allowed");
       }
     }
   });
