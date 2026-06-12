@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halom Casa Calendar</title>
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
+
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f5f5f5}
+header{background:#222;color:#fff;padding:12px 16px;display:flex;justify-content:space-between}
+#loginBox,#calendarContainer{max-width:1100px;margin:20px auto;background:#fff;padding:20px;border-radius:10px}
+input,textarea,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box}
+button{cursor:pointer}
+#calendar{max-width:1000px;margin:auto}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5)}
+.modal-content{background:white;max-width:450px;margin:10% auto;padding:20px;border-radius:10px}
+</style>
+</head>
+<body>
+
+<header>
+<h3>Halom Casa Calendar</h3>
+<button id="logoutBtn" style="width:auto;display:none">Logout</button>
+</header>
+
+<div id="loginBox">
+<h2>Login</h2>
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button id="loginBtn">Login</button>
+<div id="loginMsg"></div>
+</div>
+
+<div id="calendarContainer" style="display:none">
+<div id="calendar"></div>
+</div>
+
+<div id="bookingModal" class="modal">
+  <div class="modal-content">
+    <h3>Block Date</h3>
+    <input id="guestName" placeholder="Guest Name">
+    <textarea id="notes" placeholder="Notes"></textarea>
+    <button id="saveBooking">Save Booking</button>
+    <button onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<div id="viewModal" class="modal">
+  <div class="modal-content">
+    <h3>Booking Details</h3>
+    <p><b>Date:</b> <span id="vDate"></span></p>
+    <p><b>Guest:</b> <span id="vGuest"></span></p>
+    <p><b>Notes:</b> <span id="vNotes"></span></p>
+    <button id="unblockBtn">Unblock Date</button>
+    <button onclick="closeViewModal()">Close</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
+  authDomain: "halom-casa-booking-calendar.firebaseapp.com",
+  projectId: "halom-casa-booking-calendar",
+  storageBucket: "halom-casa-booking-calendar.firebasestorage.app",
+  messagingSenderId: "171254486073",
+  appId: "1:171254486073:web:d1ea9a603c5b33d602a9e8"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let calendar;
+let selectedDate = null;
+let selectedDoc = null;
+
+window.closeModal=()=>document.getElementById('bookingModal').style.display='none';
+window.closeViewModal=()=>document.getElementById('viewModal').style.display='none';
+
+document.getElementById('loginBtn').onclick=async()=>{
+ try{
+  await signInWithEmailAndPassword(auth,email.value,password.value);
+ }catch(e){ loginMsg.innerText=e.message; }
+};
+
+logoutBtn.onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth, async user=>{
+ if(user){
+   loginBox.style.display='none';
+   calendarContainer.style.display='block';
+   logoutBtn.style.display='block';
+   await initCalendar();
+ }else{
+   loginBox.style.display='block';
+   calendarContainer.style.display='none';
+   logoutBtn.style.display='none';
+ }
+});
+
+async function initCalendar(){
+ if(calendar){calendar.destroy();}
+ calendar=new FullCalendar.Calendar(document.getElementById('calendar'),{
+   initialView:'dayGridMonth',
+   dateClick(info){
+     selectedDate=info.dateStr;
+     bookingModal.style.display='block';
+   },
+   eventClick(info){
+      const e=info.event.extendedProps;
+      selectedDoc=e.docId;
+      vDate.textContent=info.event.startStr;
+      vGuest.textContent=e.guestName;
+      vNotes.textContent=e.notes;
+      viewModal.style.display='block';
+   }
+ });
+ calendar.render();
+ await loadBookings();
+}
+
+async function loadBookings(){
+ const snap=await getDocs(collection(db,'blockedDates'));
+ snap.forEach(doc=>{
+   const d=doc.data();
+   calendar.addEvent({
+     title:d.guestName || 'Blocked',
+     start:d.date,
+     color:'red',
+     allDay:true,
+     docId:doc.id,
+     guestName:d.guestName,
+     notes:d.notes
+   });
+ });
+}
+
+saveBooking.onclick=async()=>{
+ await addDoc(collection(db,'blockedDates'),{
+   date:selectedDate,
+   guestName:guestName.value,
+   notes:notes.value
+ });
+ location.reload();
+};
+
+unblockBtn.onclick=async()=>{
+ const q=query(collection(db,'blockedDates'));
+ const snap=await getDocs(q);
+ snap.forEach(async d=>{
+   if(d.id===selectedDoc){ await deleteDoc(d.ref); }
+ });
+ location.reload();
+};
+</script>
+</body>
+</html>
