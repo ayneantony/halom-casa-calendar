@@ -9,24 +9,76 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
 
 <style>
-body{font-family:Arial;margin:0;background:#f5f5f5;}
-header{background:#222;color:#fff;padding:12px;display:flex;justify-content:space-between;}
-
-#loginBox,#calendarContainer{
-  max-width:1100px;margin:20px auto;background:#fff;padding:20px;border-radius:10px;
+body{
+  font-family:Arial;
+  margin:0;
+  background:#f5f5f5;
 }
 
-input,textarea,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box;}
+/* HEADER */
+header{
+  background:#222;
+  color:#fff;
+  padding:12px;
+  display:flex;
+  justify-content:space-between;
+}
 
-#calendar{max-width:1000px;margin:auto;}
+/* CONTAINERS */
+#loginBox,#calendarContainer{
+  max-width:1100px;
+  margin:20px auto;
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+}
 
+/* INPUTS */
+input,textarea,button{
+  padding:10px;
+  margin:5px 0;
+  width:100%;
+  box-sizing:border-box;
+}
+
+/* CALENDAR */
+#calendar{
+  max-width:1000px;
+  margin:auto;
+}
+
+/* 🔥 FIX: CALENDAR BELOW MODAL */
+#calendarContainer{
+  position:relative;
+  z-index:1;
+}
+
+/* 🔥 MODAL FIX (IMPORTANT) */
 .modal{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
-  align-items:center;justify-content:center;
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.6);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  z-index:99999;
 }
 
 .modal-content{
-  background:#fff;padding:20px;border-radius:10px;width:90%;max-width:450px;
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+  width:90%;
+  max-width:450px;
+
+  position:relative;
+  z-index:100000;
 }
 </style>
 </head>
@@ -38,6 +90,7 @@ input,textarea,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box
 <button id="logoutBtn" style="width:auto;display:none">Logout</button>
 </header>
 
+<!-- LOGIN -->
 <div id="loginBox">
 <h2>Login</h2>
 <input id="email" type="email" placeholder="Email">
@@ -46,10 +99,12 @@ input,textarea,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box
 <div id="loginMsg"></div>
 </div>
 
+<!-- CALENDAR -->
 <div id="calendarContainer" style="display:none">
 <div id="calendar"></div>
 </div>
 
+<!-- BOOKING MODAL -->
 <div id="bookingModal" class="modal">
   <div class="modal-content">
     <h3>Block Date</h3>
@@ -60,6 +115,7 @@ input,textarea,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box
   </div>
 </div>
 
+<!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
   <div class="modal-content">
     <h3>Booking Details</h3>
@@ -72,17 +128,18 @@ input,textarea,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box
 </div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
-  authDomain: "halom-casa-booking-calendar.firebaseapp.com",
-  projectId: "halom-casa-booking-calendar",
-  storageBucket: "halom-casa-booking-calendar.firebasestorage.app",
-  messagingSenderId: "171254486073",
-  appId: "1:171254486073:web:d1ea9a603c5b33d602a9e8"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_BUCKET",
+  messagingSenderId: "YOUR_ID",
+  appId: "YOUR_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -93,12 +150,18 @@ let calendar;
 let selectedDate = null;
 let selectedDoc = null;
 
-function open(id){document.getElementById(id).style.display='flex';}
-function close(id){document.getElementById(id).style.display='none';}
+/* MODAL CONTROL */
+function open(id){
+  document.getElementById(id).style.display='flex';
+}
+function close(id){
+  document.getElementById(id).style.display='none';
+}
 
 window.closeBooking = () => close('bookingModal');
 window.closeView = () => close('viewModal');
 
+/* LOGIN */
 document.getElementById('loginBtn').onclick = async () => {
   try{
     await signInWithEmailAndPassword(auth,email.value,password.value);
@@ -109,6 +172,7 @@ document.getElementById('loginBtn').onclick = async () => {
 
 logoutBtn.onclick = () => signOut(auth);
 
+/* AUTH STATE */
 onAuthStateChanged(auth,(user)=>{
   if(user){
     loginBox.style.display='none';
@@ -122,8 +186,10 @@ onAuthStateChanged(auth,(user)=>{
   }
 });
 
+/* INIT CALENDAR */
 function initCalendar(){
   calendar = new FullCalendar.Calendar(document.getElementById('calendar'),{
+
     initialView:'dayGridMonth',
 
     dateClick(info){
@@ -147,6 +213,7 @@ function initCalendar(){
   loadBookings();
 }
 
+/* REAL-TIME FIREBASE SYNC */
 function loadBookings(){
   const q = query(collection(db,'blockedDates'));
 
@@ -171,6 +238,7 @@ function loadBookings(){
   });
 }
 
+/* SAVE BOOKING */
 document.getElementById('saveBooking').onclick = async () => {
 
   let name = guestName.value;
@@ -190,6 +258,7 @@ document.getElementById('saveBooking').onclick = async () => {
   closeBooking();
 };
 
+/* UNBLOCK */
 unblockBtn.onclick = async () => {
   await deleteDoc(doc(db,'blockedDates',selectedDoc));
   closeView();
