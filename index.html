@@ -79,6 +79,31 @@ const firebaseConfig = {
 };
 
 const ADMIN_EMAIL = "ayneantony4159@gmail.com";
+  function getUserColor(email){
+
+  if(email === ADMIN_EMAIL){
+    return "#e74c3c"; // Red for admin
+  }
+
+  const colors = [
+    "#3498db", // Blue
+    "#2ecc71", // Green
+    "#9b59b6", // Purple
+    "#f39c12", // Orange
+    "#1abc9c", // Teal
+    "#e84393", // Pink
+    "#34495e", // Navy
+    "#16a085"  // Sea Green
+  ];
+
+  let hash = 0;
+
+  for(let i = 0; i < email.length; i++){
+    hash += email.charCodeAt(i);
+  }
+
+  return colors[Math.abs(hash) % colors.length];
+}
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -173,7 +198,7 @@ function loadBookings(){
     title:`${data.bookingType} - ${data.guestName}`,
     start:data.date,
     allDay:true,
-    color:"red",
+    color:getUserColor(data.bookedBy || ""),
     docId:d.id,
     guestName:data.guestName,
     bookingType:data.bookingType,
