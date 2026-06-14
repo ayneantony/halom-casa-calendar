@@ -9,49 +9,14 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
 
 <style>
-body{font-family:Arial;margin:0;background:#f5f5f5;}
-
-header{
-  background:#222;color:#fff;padding:12px;
-  display:flex;justify-content:space-between;
-}
-
-#loginBox,#calendarContainer{
-  max-width:1100px;margin:20px auto;
-  background:#fff;padding:20px;border-radius:10px;
-}
-
-input,textarea,button{
-  padding:10px;margin:5px 0;width:100%;
-  box-sizing:border-box;
-}
-
-#calendar{max-width:1000px;margin:auto;}
-
-#calendarContainer{position:relative;z-index:1;}
-
-/* MODAL FIX */
-.modal{
-  display:none;
-  position:fixed;
-  top:0;left:0;
-  width:100%;height:100%;
-  background:rgba(0,0,0,0.6);
-  justify-content:center;
-  align-items:center;
-  z-index:99999;
-}
-
-.modal-content{
-  background:#fff;
-  padding:20px;
-  border-radius:10px;
-  width:90%;
-  max-width:450px;
-}
+body{font-family:Arial;margin:0;background:#f5f5f5}
+header{background:#222;color:#fff;padding:12px;display:flex;justify-content:space-between}
+#loginBox,#calendarContainer{max-width:1100px;margin:20px auto;background:#fff;padding:20px;border-radius:10px}
+input,select,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);justify-content:center;align-items:center;z-index:99999}
+.modal-content{background:#fff;padding:20px;border-radius:10px;width:90%;max-width:500px}
 </style>
 </head>
-
 <body>
 
 <header>
@@ -59,7 +24,6 @@ input,textarea,button{
 <button id="logoutBtn" style="width:auto;display:none">Logout</button>
 </header>
 
-<!-- LOGIN -->
 <div id="loginBox">
 <h2>Login</h2>
 <input id="email" type="email" placeholder="Email">
@@ -68,39 +32,42 @@ input,textarea,button{
 <div id="loginMsg"></div>
 </div>
 
-<!-- CALENDAR -->
 <div id="calendarContainer" style="display:none">
 <div id="calendar"></div>
 </div>
 
-<!-- BOOKING MODAL -->
 <div id="bookingModal" class="modal">
-  <div class="modal-content">
-    <h3>Block Date</h3>
-    <input id="guestName" placeholder="Guest Name">
-    <textarea id="notes" placeholder="Notes"></textarea>
-    <button id="saveBooking">Save Booking</button>
-    <button onclick="closeBooking()">Cancel</button>
-  </div>
+<div class="modal-content">
+<h3>Create Booking</h3>
+<input id="guestName" placeholder="Guest Name">
+<select id="bookingType">
+<option value="Full Property">Full Property</option>
+<option value="1 Room">1 Room</option>
+<option value="2 Rooms">2 Rooms</option>
+</select>
+<button id="saveBooking">Save Booking</button>
+<button onclick="closeBooking()">Cancel</button>
+</div>
 </div>
 
-<!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
-  <div class="modal-content">
-    <h3>Booking Details</h3>
-    <p><b>Date:</b> <span id="vDate"></span></p>
-    <p><b>Guest:</b> <span id="vGuest"></span></p>
-    <p><b>Notes:</b> <span id="vNotes"></span></p>
-    <button id="unblockBtn">Unblock Date</button>
-    <button onclick="closeView()">Close</button>
-  </div>
+<div class="modal-content">
+<h3>Booking Details</h3>
+<p><b>Date:</b> <span id="vDate"></span></p>
+<p><b>Guest:</b> <span id="vGuest"></span></p>
+<p><b>Type:</b> <span id="vType"></span></p>
+<p><b>Booked By:</b> <span id="vBookedBy"></span></p>
+<p><b>Booked On:</b> <span id="vBookedOn"></span></p>
+<p><b>Availability:</b> <span id="vAvailability"></span></p>
+<button id="unblockBtn">Delete Booking</button>
+<button onclick="closeView()">Close</button>
+</div>
 </div>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
@@ -111,143 +78,164 @@ const firebaseConfig = {
   appId: "1:171254486073:web:d1ea9a603c5b33d602a9e8"
 };
 
+const ADMIN_EMAIL = "CHANGE_THIS_ADMIN_EMAIL";
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let calendar = null;
-let selectedDate = null;
-let selectedDoc = null;
+let calendar;
+let selectedDate=null;
+let selectedDoc=null;
 
-/* MODAL CONTROL */
-function open(id){
-  document.querySelectorAll('.modal').forEach(m => m.style.display='none');
-  document.getElementById(id).style.display='flex';
-}
-function close(id){
-  document.getElementById(id).style.display='none';
-}
+function openModal(id){document.getElementById(id).style.display="flex";}
+function closeModal(id){document.getElementById(id).style.display="none";}
+window.closeBooking=()=>closeModal("bookingModal");
+window.closeView=()=>closeModal("viewModal");
 
-window.closeBooking = () => close('bookingModal');
-window.closeView = () => close('viewModal');
-
-/* LOGIN */
-document.getElementById('loginBtn').onclick = async () => {
-  try{
-    await signInWithEmailAndPassword(auth,email.value,password.value);
-  }catch(e){
-    loginMsg.innerText = e.message;
-  }
+loginBtn.onclick=async()=>{
+ try{
+  await signInWithEmailAndPassword(auth,email.value,password.value);
+ }catch(e){loginMsg.innerText=e.message;}
 };
 
-logoutBtn.onclick = () => signOut(auth);
+logoutBtn.onclick=()=>signOut(auth);
 
-/* AUTH */
-onAuthStateChanged(auth,(user)=>{
-  if(user){
-    loginBox.style.display='none';
-    calendarContainer.style.display='block';
-    logoutBtn.style.display='block';
-
-    if(!calendar){
-      initCalendar();
-    }
-
-  }else{
-    loginBox.style.display='block';
-    calendarContainer.style.display='none';
-    logoutBtn.style.display='none';
-  }
+onAuthStateChanged(auth,user=>{
+ if(user){
+  loginBox.style.display="none";
+  calendarContainer.style.display="block";
+  logoutBtn.style.display="block";
+  if(!calendar) initCalendar();
+ }else{
+  loginBox.style.display="block";
+  calendarContainer.style.display="none";
+  logoutBtn.style.display="none";
+ }
 });
 
-/* CALENDAR */
+function roomsUsed(type){
+ if(type==="Full Property") return 3;
+ if(type==="2 Rooms") return 2;
+ return 1;
+}
+
 function initCalendar(){
+ calendar=new FullCalendar.Calendar(document.getElementById('calendar'),{
+  initialView:'dayGridMonth',
+  dateClick(info){
+   selectedDate=info.dateStr;
+   openModal("bookingModal");
+  },
+  eventClick(info){
+   const e=info.event.extendedProps;
+   selectedDoc=e.docId;
 
-  if(calendar){
-    calendar.destroy();
-    calendar = null;
+   vDate.innerText=info.event.startStr;
+   vGuest.innerText=e.guestName;
+   vType.innerText=e.bookingType;
+   vBookedBy.innerText=e.bookedBy||"-";
+
+   vBookedOn.innerText=e.createdAt && e.createdAt.toDate
+    ? e.createdAt.toDate().toLocaleString()
+    : "-";
+
+   vAvailability.innerText=e.availability || "";
+
+   const user=auth.currentUser;
+   unblockBtn.style.display=(user.email===ADMIN_EMAIL || user.uid===e.userId) ? "block":"none";
+
+   openModal("viewModal");
   }
-
-  calendar = new FullCalendar.Calendar(document.getElementById('calendar'),{
-
-    initialView:'dayGridMonth',
-
-    dateClick(info){
-      selectedDate = info.dateStr;
-      setTimeout(()=>open('bookingModal'),10);
-    },
-
-    eventClick(info){
-      const e = info.event.extendedProps;
-      selectedDoc = e.docId;
-
-      vDate.innerText = info.event.startStr;
-      vGuest.innerText = e.guestName;
-      vNotes.innerText = e.notes || "No notes";
-
-      open('viewModal');
-    }
-  });
-
-  calendar.render();
-  loadBookings();
+ });
+ calendar.render();
+ loadBookings();
 }
 
-/* REAL-TIME FIRESTORE */
 function loadBookings(){
+ onSnapshot(query(collection(db,"blockedDates")),snap=>{
+  calendar.removeAllEvents();
 
-  const q = query(collection(db,'blockedDates'));
+  const dayTotals={};
 
-  onSnapshot(q,(snapshot)=>{
+  snap.forEach(d=>{
+   const data=d.data();
+   const used=roomsUsed(data.bookingType||"1 Room");
 
-    if(!calendar) return;
-
-    calendar.removeAllEvents();
-
-    snapshot.forEach(d=>{
-      const data = d.data();
-
-      calendar.addEvent({
-        title: data.guestName || 'Blocked',
-        start: data.date,
-        color:'red',
-        allDay:true,
-        docId:d.id,
-        guestName:data.guestName,
-        notes:data.notes
-      });
-    });
-
+   dayTotals[data.date]=(dayTotals[data.date]||0)+used;
   });
+
+  snap.forEach(d=>{
+   const data=d.data();
+   const remaining=Math.max(0,3-(dayTotals[data.date]||0));
+
+   calendar.addEvent({
+    title:`${data.bookingType} - ${data.guestName}`,
+    start:data.date,
+    allDay:true,
+    color:"red",
+    docId:d.id,
+    guestName:data.guestName,
+    bookingType:data.bookingType,
+    bookedBy:data.bookedBy,
+    userId:data.userId,
+    createdAt:data.createdAt,
+    availability: remaining===0 ? "Fully Booked" : remaining+" room(s) available"
+   });
+  });
+ });
 }
 
-/* SAVE */
-document.getElementById('saveBooking').onclick = async () => {
+saveBooking.onclick=async()=>{
+ const user=auth.currentUser;
+ const guest=guestName.value.trim();
+ const type=bookingType.value;
 
-  let name = guestName.value;
-  let note = notes.value;
+ if(!guest){
+  alert("Enter guest name");
+  return;
+ }
 
-  if(!name){
-    alert("Enter guest name");
-    return;
-  }
+ const events=calendar.getEvents().filter(e=>e.startStr===selectedDate);
 
-  await addDoc(collection(db,'blockedDates'),{
-    date:selectedDate,
-    guestName:name,
-    notes:note || ""
-  });
+ let used=0;
+ let full=false;
 
-  closeBooking();
+ events.forEach(e=>{
+  const t=e.extendedProps.bookingType;
+  if(t==="Full Property") full=true;
+  used+=roomsUsed(t);
+ });
+
+ if(full){
+  alert("Full Property already booked.");
+  return;
+ }
+
+ const requested=roomsUsed(type);
+
+ if(used+requested>3){
+  alert("Not enough rooms available.");
+  return;
+ }
+
+ await addDoc(collection(db,"blockedDates"),{
+  date:selectedDate,
+  guestName:guest,
+  bookingType:type,
+  bookedBy:user.email,
+  userId:user.uid,
+  createdAt:serverTimestamp()
+ });
+
+ guestName.value="";
+ closeModal("bookingModal");
 };
 
-/* UNBLOCK */
-unblockBtn.onclick = async () => {
-  await deleteDoc(doc(db,'blockedDates',selectedDoc));
-  closeView();
+unblockBtn.onclick=async()=>{
+ await deleteDoc(doc(db,"blockedDates",selectedDoc));
+ closeModal("viewModal");
 };
-
 </script>
-
 </body>
 </html>
