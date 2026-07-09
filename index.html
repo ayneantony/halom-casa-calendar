@@ -46,14 +46,7 @@ gyroscope=()
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
 
-<style>
-body{font-family:Arial;margin:0;background:#f5f5f5}
-header{background:#222;color:#fff;padding:12px;display:flex;justify-content:space-between}
-#loginBox,#calendarContainer{max-width:1100px;margin:20px auto;background:#fff;padding:20px;border-radius:10px}
-input,select,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box}
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);justify-content:center;align-items:center;z-index:99999}
-.modal-content{background:#fff;padding:20px;border-radius:10px;width:90%;max-width:500px}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -88,7 +81,7 @@ autocomplete="off">
 <option value="2 Rooms">2 Rooms</option>
 </select>
 <button id="saveBooking">Save Booking</button>
-<button onclick="closeBooking()">Cancel</button>
+<button id="cancelBooking">Cancel</button>
 </div>
 </div>
 
@@ -102,7 +95,7 @@ autocomplete="off">
 <p><b>Booked On:</b> <span id="vBookedOn"></span></p>
 <p><b>Availability:</b> <span id="vAvailability"></span></p>
 <button id="unblockBtn">Delete Booking</button>
-<button onclick="closeView()">Close</button>
+<button id="closeViewBtn">Close</button>
 </div>
 </div>
 
@@ -303,6 +296,11 @@ saveBooking.onclick = async () => {
     try {
 
         const user = auth.currentUser;
+if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+    alert("Invalid date.");
+    saveBooking.disabled = false;
+    return;
+}
         const guest = guestName.value.trim();
 if(!/^[A-Za-z0-9 .'-]{2,50}$/.test(guest)){
     alert("Invalid guest name.");
@@ -310,6 +308,17 @@ if(!/^[A-Za-z0-9 .'-]{2,50}$/.test(guest)){
     return;
 }
         const type = bookingType.value;
+const allowedTypes = [
+    "Full Property",
+    "1 Room",
+    "2 Rooms"
+];
+
+if (!allowedTypes.includes(type)) {
+    alert("Invalid booking type.");
+    saveBooking.disabled = false;
+    return;
+}
 
         if (!guest) {
             alert("Enter guest name");
