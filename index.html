@@ -346,7 +346,6 @@ saveBooking.onclick = async () => {
     } catch (error) {
 
         alert("Unable to save booking.");
-
         console.error(error);
 
     } finally {
@@ -356,57 +355,13 @@ saveBooking.onclick = async () => {
     }
 
 };
- const user=auth.currentUser;
- const guest=guestName.value.trim();
- const type=bookingType.value;
 
- if(!guest){
-  alert("Enter guest name");
-  return;
- }
+unblockBtn.onclick = async () => {
 
- const events=calendar.getEvents().filter(e=>e.startStr===selectedDate);
+    await deleteDoc(doc(db, "blockedDates", selectedDoc));
 
- let used=0;
- let full=false;
+    closeModal("viewModal");
 
- events.forEach(e=>{
-  const t=e.extendedProps.bookingType;
-  if(t==="Full Property") full=true;
-  used+=roomsUsed(t);
- });
-
- if(full){
-  alert("Full Property already booked.");
-  return;
- }
-
- const requested=roomsUsed(type);
-
- if(used+requested>3){
-  alert("Not enough rooms available.");
-  return;
- }
-
- await addDoc(collection(db,"blockedDates"),{
-  date:selectedDate,
-  guestName:guest,
-  bookingType:type,
-  bookedBy:user.email,
-  userId:user.uid,
-  createdAt:serverTimestamp()
- });
-
-guestName.value="";
-
-closeModal("bookingModal");
-
-saveBooking.disabled=false;
-};
-
-unblockBtn.onclick=async()=>{
- await deleteDoc(doc(db,"blockedDates",selectedDoc));
- closeModal("viewModal");
 };
 </script>
 </body>
