@@ -102,7 +102,7 @@ autocomplete="off">
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getFirestore, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
@@ -114,29 +114,15 @@ const firebaseConfig = {
 };
 
 const ADMIN_EMAIL = "ayneantony4159@gmail.com";
-  function getUserColor(email){
-
+function getUserColor(email){
   if(email === ADMIN_EMAIL){
-    return "#e74c3c"; // Red for admin
+    return "#e74c3c";
   }
-
-  const colors = [
-    "#3498db", // Blue
-    "#2ecc71", // Green
-    "#9b59b6", // Purple
-    "#f39c12", // Orange
-    "#1abc9c", // Teal
-    "#e84393", // Pink
-    "#34495e", // Navy
-    "#16a085"  // Sea Green
-  ];
-
+  const colors = ["#3498db", "#2ecc71", "#9b59b6", "#f39c12", "#1abc9c", "#e84393", "#34495e", "#16a085"];
   let hash = 0;
-
   for(let i = 0; i < email.length; i++){
     hash += email.charCodeAt(i);
   }
-
   return colors[Math.abs(hash) % colors.length];
 }
 
@@ -154,53 +140,25 @@ document.getElementById("cancelBooking").onclick = () => closeModal("bookingModa
 document.getElementById("closeViewBtn").onclick = () => closeModal("viewModal");
 
 loginBtn.onclick = async () => {
-
     loginMsg.textContent = "";
-
     loginBtn.disabled = true;
-
     try{
-
-        await signInWithEmailAndPassword(
-            auth,
-            email.value.trim(),
-            password.value
-        );
-
+        await signInWithEmailAndPassword(auth, email.value.trim(), password.value);
     }catch(error){
-
         switch(error.code){
-
-            case "auth/invalid-credential":
-                loginMsg.textContent="Invalid email or password.";
-                break;
-
-            case "auth/invalid-email":
-                loginMsg.textContent="Invalid email address.";
-                break;
-
-            case "auth/too-many-requests":
-                loginMsg.textContent="Too many attempts. Try again later.";
-                break;
-
-            default:
-                loginMsg.textContent="Login failed.";
+            case "auth/invalid-credential": loginMsg.textContent="Invalid email or password."; break;
+            case "auth/invalid-email": loginMsg.textContent="Invalid email address."; break;
+            case "auth/too-many-requests": loginMsg.textContent="Too many attempts. Try again later."; break;
+            default: loginMsg.textContent="Login failed.";
         }
-
     }finally{
-
         loginBtn.disabled=false;
-
     }
-
 };
 
 logoutBtn.onclick = async ()=>{
-
     await signOut(auth);
-
     location.reload();
-
 };
 
 onAuthStateChanged(auth,user=>{
@@ -226,28 +184,21 @@ function initCalendar(){
  calendar=new FullCalendar.Calendar(document.getElementById('calendar'),{
   initialView:'dayGridMonth',
   dateClick(info){
-if(!auth.currentUser) return;
+   if(!auth.currentUser) return;
    selectedDate=info.dateStr;
    openModal("bookingModal");
   },
   eventClick(info){
    const e=info.event.extendedProps;
    selectedDoc=e.docId;
-
    vDate.innerText=info.event.startStr;
    vGuest.innerText=e.guestName;
    vType.innerText=e.bookingType;
    vBookedBy.innerText=e.bookedBy||"-";
-
-   vBookedOn.innerText=e.createdAt && e.createdAt.toDate
-    ? e.createdAt.toDate().toLocaleString()
-    : "-";
-
+   vBookedOn.innerText=e.createdAt && e.createdAt.toDate ? e.createdAt.toDate().toLocaleString() : "-";
    vAvailability.innerText=e.availability || "";
-
    const user=auth.currentUser;
    unblockBtn.style.display=(user.email===ADMIN_EMAIL || user.uid===e.userId) ? "block":"none";
-
    openModal("viewModal");
   }
  });
@@ -258,20 +209,15 @@ if(!auth.currentUser) return;
 function loadBookings(){
  onSnapshot(query(collection(db,"blockedDates")),snap=>{
   calendar.removeAllEvents();
-
   const dayTotals={};
-
   snap.forEach(d=>{
    const data=d.data();
    const used=roomsUsed(data.bookingType||"1 Room");
-
    dayTotals[data.date]=(dayTotals[data.date]||0)+used;
   });
-
   snap.forEach(d=>{
    const data=d.data();
    const remaining=Math.max(0,3-(dayTotals[data.date]||0));
-
    calendar.addEvent({
     title:`${String(data.bookingType)} - ${String(data.guestName)}`,
     start:data.date,
@@ -290,97 +236,95 @@ function loadBookings(){
 }
 
 saveBooking.onclick = async () => {
-
     saveBooking.disabled = true;
-
     try {
-
         const user = auth.currentUser;
-if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
-    alert("Invalid date.");
-    saveBooking.disabled = false;
-    return;
-}
-        const guest = guestName.value.trim();
-if(!/^[A-Za-z0-9 .'-]{2,50}$/.test(guest)){
-    alert("Invalid guest name.");
-    saveBooking.disabled=false;
-    return;
-}
-        const type = bookingType.value;
-const allowedTypes = [
-    "Full Property",
-    "1 Room",
-    "2 Rooms"
-];
-
-if (!allowedTypes.includes(type)) {
-    alert("Invalid booking type.");
-    saveBooking.disabled = false;
-    return;
-}
-
-        if (!guest) {
-            alert("Enter guest name");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+            alert("Invalid date.");
             return;
         }
-
-        const events = calendar.getEvents().filter(e => e.startStr === selectedDate);
-
-        let used = 0;
-        let full = false;
-
-        events.forEach(e => {
-            const t = e.extendedProps.bookingType;
-
-            if (t === "Full Property") full = true;
-
-            used += roomsUsed(t);
-        });
-
-        if (full) {
-            alert("Full Property already booked.");
+        const guest = guestName.value.trim();
+        if(!/^[A-Za-z0-9 .'-]{2,50}$/.test(guest)){
+            alert("Invalid guest name.");
+            return;
+        }
+        const type = bookingType.value;
+        const allowedTypes = ["Full Property", "1 Room", "2 Rooms"];
+        if (!allowedTypes.includes(type)) {
+            alert("Invalid booking type.");
             return;
         }
 
         const requested = roomsUsed(type);
+        const countDocRef = doc(db, "roomCounts", selectedDate);
+        const newBookingRef = doc(collection(db, "blockedDates"));
 
-        if (used + requested > 3) {
-            alert("Not enough rooms available.");
-            return;
-        }
+        // Atomic multi-document validation loop
+        await runTransaction(db, async (transaction) => {
+            const countSnap = await transaction.get(countDocRef);
+            let currentUsed = 0;
+            if (countSnap.exists()) {
+                currentUsed = countSnap.data().totalRooms || 0;
+            }
 
-        await addDoc(collection(db, "blockedDates"), {
-            date: selectedDate,
-            guestName: guest,
-            bookingType: type,
-            bookedBy: user.email,
-            userId: user.uid,
-            createdAt: serverTimestamp()
+            if (currentUsed + requested > 3) {
+                throw new Error("Not enough rooms available.");
+            }
+
+            transaction.set(countDocRef, { totalRooms: currentUsed + requested }, { merge: true });
+            transaction.set(newBookingRef, {
+                date: selectedDate,
+                guestName: guest,
+                bookingType: type,
+                bookedBy: user.email,
+                userId: user.uid,
+                createdAt: serverTimestamp()
+            });
         });
 
         guestName.value = "";
         closeModal("bookingModal");
-
     } catch (error) {
-
-        alert("Unable to save booking.");
+        alert(error.message || "Unable to save booking.");
         console.error(error);
-
     } finally {
-
         saveBooking.disabled = false;
-
     }
-
 };
 
 unblockBtn.onclick = async () => {
+    unblockBtn.disabled = true;
+    try {
+        const events = calendar.getEvents().filter(e => e.extendedProps.docId === selectedDoc);
+        if (events.length === 0) return;
+        
+        const targetEvent = events[0];
+        const targetDate = targetEvent.startStr;
+        const targetType = targetEvent.extendedProps.bookingType;
+        const roomsToFree = roomsUsed(targetType);
 
-    await deleteDoc(doc(db, "blockedDates", selectedDoc));
+        const countDocRef = doc(db, "roomCounts", targetDate);
+        const bookingDocRef = doc(db, "blockedDates", selectedDoc);
 
-    closeModal("viewModal");
+        await runTransaction(db, async (transaction) => {
+            const countSnap = await transaction.get(countDocRef);
+            let currentUsed = 0;
+            if (countSnap.exists()) {
+                currentUsed = countSnap.data().totalRooms || 0;
+            }
 
+            let newTotal = Math.max(0, currentUsed - roomsToFree);
+            transaction.set(countDocRef, { totalRooms: newTotal }, { merge: true });
+            transaction.delete(bookingDocRef);
+        });
+
+        closeModal("viewModal");
+    } catch (error) {
+        alert("Could not cancel booking safely.");
+        console.error(error);
+    } finally {
+        unblockBtn.disabled = false;
+    }
 };
 </script>
 </body>
