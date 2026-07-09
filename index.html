@@ -150,8 +150,8 @@ let selectedDoc=null;
 
 function openModal(id){document.getElementById(id).style.display="flex";}
 function closeModal(id){document.getElementById(id).style.display="none";}
-window.closeBooking=()=>closeModal("bookingModal");
-window.closeView=()=>closeModal("viewModal");
+document.getElementById("cancelBooking").onclick = () => closeModal("bookingModal");
+document.getElementById("closeViewBtn").onclick = () => closeModal("viewModal");
 
 loginBtn.onclick = async () => {
 
