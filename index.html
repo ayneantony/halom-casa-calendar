@@ -52,7 +52,10 @@ gyroscope=()
 
 <header>
 <h3>Halom Casa Calendar</h3>
-<button id="logoutBtn" style="width:auto;display:none">Logout</button>
+<div style="display:flex; gap:10px;">
+  <button id="copyReportBtn" style="width:auto;display:none">Copy Report</button>
+  <button id="logoutBtn" style="width:auto;display:none">Logout</button>
+</div>
 </header>
 
 <div id="loginBox">
@@ -166,11 +169,13 @@ onAuthStateChanged(auth,user=>{
   loginBox.style.display="none";
   calendarContainer.style.display="block";
   logoutBtn.style.display="block";
+  document.getElementById("copyReportBtn").style.display="block";
   if(!calendar) initCalendar();
  }else{
   loginBox.style.display="block";
   calendarContainer.style.display="none";
   logoutBtn.style.display="none";
+  document.getElementById("copyReportBtn").style.display="none";
  }
 });
 
@@ -259,7 +264,6 @@ saveBooking.onclick = async () => {
         const countDocRef = doc(db, "roomCounts", selectedDate);
         const newBookingRef = doc(collection(db, "blockedDates"));
 
-        // Atomic multi-document validation loop
         await runTransaction(db, async (transaction) => {
             const countSnap = await transaction.get(countDocRef);
             let currentUsed = 0;
@@ -325,6 +329,45 @@ unblockBtn.onclick = async () => {
     } finally {
         unblockBtn.disabled = false;
     }
+};
+
+document.getElementById("copyReportBtn").onclick = async () => {
+  try {
+    const currentViewDate = calendar.getDate(); 
+    const monthYearStr = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const events = calendar.getEvents().sort((a, b) => a.startStr.localeCompare(b.startStr));
+
+    const bookingLines = events.map(e => {
+      const [year, month, day] = e.startStr.split('-');
+      const formattedDate = `${day}/${month}/${year}`;
+      const type = e.extendedProps.bookingType || "1 Room";
+      const guest = e.extendedProps.guestName || "Guest";
+      return `${formattedDate} - ${type} - ${guest}`;
+    });
+
+    const nowStr = new Date().toLocaleString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).replace(',', '');
+
+    const reportText = [
+      `Halom Casa Bookings - ${monthYearStr}\n`,
+      bookingLines.join('\n'),
+      `\nTotal Bookings: ${events.length}`,
+      `\nGenerated on: ${nowStr}`
+    ].join('\n');
+
+    await navigator.clipboard.writeText(reportText);
+    alert("Report copied to clipboard successfully!");
+  } catch (err) {
+    console.error("Failed to copy report: ", err);
+    alert("Could not copy report to clipboard.");
+  }
 };
 </script>
 </body>
