@@ -60,7 +60,7 @@ gyroscope=()
 
 <div id="loginBox">
 <h2>Login</h2>
-<!-- Attributes added here to systematically kill iOS keyboard autocorrect mutations -->
+<!-- Cleaned native attributes to drop auto-correct changes made on iOS devices -->
 <input 
   id="email" 
   type="email" 
@@ -92,7 +92,9 @@ gyroscope=()
 id="guestName"
 placeholder="Guest Name"
 maxlength="50"
-autocomplete="off">
+autocomplete="off"
+pattern="[A-Za-z0-9 .'-]{2,50}"
+title="Letters, spaces, numbers and standard dashes only.">
 <select id="bookingType">
 <option value="Full Property">Full Property</option>
 <option value="1 Room">1 Room</option>
@@ -118,7 +120,7 @@ autocomplete="off">
 </div>
 
 <script>
-// Global runtime visibility window hook for iOS debug visibility
+// Global tracking monitor hook for edge-case mobile exceptions
 window.onerror = function(msg, url, line) {
   alert("System Error: " + msg + "\nLine: " + line);
   return false;
@@ -172,7 +174,7 @@ loginBtn.onclick = async () => {
         let clearEmail = email.value.trim().toLowerCase();
         let clearPassword = password.value;
         
-        // Regex scrub sequence converting smart-punctuation typography configurations back to normal web ASCII codes
+        // Scrub layout punctuation strings back into clean ASCII codes for safe verification
         clearPassword = clearPassword.replace(/[\u2013\u2014]/g, "-");
         clearPassword = clearPassword.replace(/[\u201C\u201D]/g, '"');
         clearPassword = clearPassword.replace(/[\u2018\u2019]/g, "'");
@@ -376,7 +378,7 @@ document.getElementById("copyReportBtn").onclick = async () => {
     const targetMonthStr = String(currentViewDate.getMonth() + 1).padStart(2, '0');
     const monthYearStr = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-    // Isolate events bound to the current display view range
+    // Isolate active dataset items strictly parsing matching calendar range strings
     const events = calendar.getEvents()
       .filter(e => {
         const [year, month] = e.startStr.split('-');
