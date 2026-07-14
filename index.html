@@ -2,19 +2,49 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Relaxed CSP specifically tailored to allow iOS WebKit/Safari to communicate freely with Firebase -->
-<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; stroke-src *; img-src * data: blob:;">
+<meta http-equiv="Content-Security-Policy"
+content="
+default-src 'self';
+base-uri 'self';
+object-src 'none';
+form-action 'self';
+upgrade-insecure-requests;
+script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net;
+style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+img-src 'self' data: blob: https:;
+font-src 'self' data: blob: https:;
+connect-src
+https://firestore.googleapis.com
+https://identitytoolkit.googleapis.com
+https://securetoken.googleapis.com
+https://firebaseinstallations.googleapis.com
+https://www.googleapis.com
+https://*.googleapis.com
+wss://firestore.googleapis.com;
+worker-src 'self' blob:;
+manifest-src 'self';
+">
+
+<meta name="referrer"
+content="strict-origin-when-cross-origin">
+<meta http-equiv="X-XSS-Protection" content="0">
+
+<meta http-equiv="Permissions-Policy"
+content="
+camera=(),
+microphone=(),
+geolocation=(),
+payment=(),
+usb=(),
+accelerometer=(),
+gyroscope=()
+">
 <title>Halom Casa Calendar</title>
 
-<!-- FullCalendar Links -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
-
-<!-- Firebase Compat Libraries (Highly Stable for Mobile WebKit/Safari) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <link rel="stylesheet" href="style.css">
 </head>
@@ -30,7 +60,7 @@
 
 <div id="loginBox">
 <h2>Login</h2>
-<!-- Native attributes to disable sneaky iOS auto-capitalization and smart changes -->
+<!-- Attributes added here to systematically kill iOS keyboard autocorrect mutations -->
 <input 
   id="email" 
   type="email" 
@@ -58,7 +88,11 @@
 <div id="bookingModal" class="modal">
 <div class="modal-content">
 <h3>Create Booking</h3>
-<input id="guestName" placeholder="Guest Name" maxlength="50" autocomplete="off">
+<input
+id="guestName"
+placeholder="Guest Name"
+maxlength="50"
+autocomplete="off">
 <select id="bookingType">
 <option value="Full Property">Full Property</option>
 <option value="1 Room">1 Room</option>
@@ -84,11 +118,17 @@
 </div>
 
 <script>
-// Global Error Trap to surface hidden engine exceptions safely on mobile displays
+// Global runtime visibility window hook for iOS debug visibility
 window.onerror = function(msg, url, line) {
   alert("System Error: " + msg + "\nLine: " + line);
   return false;
 };
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getFirestore, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
@@ -98,15 +138,6 @@ const firebaseConfig = {
   messagingSenderId: "171254486073",
   appId: "1:171254486073:web:d1ea9a603c5b33d602a9e8"
 };
-
-try {
-  firebase.initializeApp(firebaseConfig);
-} catch(e) {
-  alert("Firebase Initialization Failed: " + e.message);
-}
-
-const auth = firebase.auth();
-const db = firebase.firestore();
 
 const ADMIN_EMAIL = "ayneantony4159@gmail.com";
 function getUserColor(email){
@@ -121,6 +152,10 @@ function getUserColor(email){
   return colors[Math.abs(hash) % colors.length];
 }
 
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
 let calendar;
 let selectedDate=null;
 let selectedDoc=null;
@@ -133,15 +168,15 @@ document.getElementById("closeViewBtn").onclick = () => closeModal("viewModal");
 loginBtn.onclick = async () => {
     loginMsg.textContent = "";
     loginBtn.disabled = true;
-    try {
+    try{
         let clearEmail = email.value.trim().toLowerCase();
         let clearPassword = password.value;
         
-        // Scrub iOS smart punctuation conversions back into clean web-safe characters
-        clearPassword = clearPassword.replace(/[\u2013\u2014]/g, "-"); // Fix Smart Hyphens
-        clearPassword = clearPassword.replace(/[\u201C\u201D]/g, '"'); // Fix Smart Double Quotes
-        clearPassword = clearPassword.replace(/[\u2018\u2019]/g, "'"); // Fix Smart Single Quotes
-        clearPassword = clearPassword.replace(/\u00A0/g, ' ');         // Fix Non-Breaking Spaces
+        // Regex scrub sequence converting smart-punctuation typography configurations back to normal web ASCII codes
+        clearPassword = clearPassword.replace(/[\u2013\u2014]/g, "-");
+        clearPassword = clearPassword.replace(/[\u201C\u201D]/g, '"');
+        clearPassword = clearPassword.replace(/[\u2018\u2019]/g, "'");
+        clearPassword = clearPassword.replace(/\u00A0/g, ' ');
 
         if(!clearEmail || !clearPassword) {
             alert("Please fill in all fields.");
@@ -149,27 +184,25 @@ loginBtn.onclick = async () => {
             return;
         }
 
-        await auth.signInWithEmailAndPassword(clearEmail, clearPassword);
-    } catch(error) {
-        console.error(error);
-        alert("Firebase Auth Return Error:\nCode: " + error.code + "\nMessage: " + error.message);
+        await signInWithEmailAndPassword(auth, clearEmail, clearPassword);
+    }catch(error){
         switch(error.code){
             case "auth/invalid-credential": loginMsg.textContent="Invalid email or password."; break;
             case "auth/invalid-email": loginMsg.textContent="Invalid email address."; break;
             case "auth/too-many-requests": loginMsg.textContent="Too many attempts. Try again later."; break;
             default: loginMsg.textContent="Login failed.";
         }
-    } finally {
-        loginBtn.disabled = false;
+    }finally{
+        loginBtn.disabled=false;
     }
 };
 
 logoutBtn.onclick = async ()=>{
-    await auth.signOut();
+    await signOut(auth);
     location.reload();
 };
 
-auth.onAuthStateChanged(user=>{
+onAuthStateChanged(auth,user=>{
  if(user){
   loginBox.style.display="none";
   calendarContainer.style.display="block";
@@ -217,7 +250,7 @@ function initCalendar(){
 }
 
 function loadBookings(){
- db.collection("blockedDates").onSnapshot(snap=>{
+ onSnapshot(query(collection(db,"blockedDates")),snap=>{
   calendar.removeAllEvents();
   const dayTotals={};
   snap.forEach(d=>{
@@ -266,13 +299,13 @@ saveBooking.onclick = async () => {
         }
 
         const requested = roomsUsed(type);
-        const countDocRef = db.collection("roomCounts").doc(selectedDate);
-        const newBookingRef = db.collection("blockedDates").doc();
+        const countDocRef = doc(db, "roomCounts", selectedDate);
+        const newBookingRef = doc(collection(db, "blockedDates"));
 
-        await db.runTransaction(async (transaction) => {
+        await runTransaction(db, async (transaction) => {
             const countSnap = await transaction.get(countDocRef);
             let currentUsed = 0;
-            if (countSnap.exists) {
+            if (countSnap.exists()) {
                 currentUsed = countSnap.data().totalRooms || 0;
             }
 
@@ -287,7 +320,7 @@ saveBooking.onclick = async () => {
                 bookingType: type,
                 bookedBy: user.email,
                 userId: user.uid,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                createdAt: serverTimestamp()
             });
         });
 
@@ -312,13 +345,13 @@ unblockBtn.onclick = async () => {
         const targetType = targetEvent.extendedProps.bookingType;
         const roomsToFree = roomsUsed(targetType);
 
-        const countDocRef = db.collection("roomCounts").doc(targetDate);
-        const bookingDocRef = db.collection("blockedDates").doc(selectedDoc);
+        const countDocRef = doc(db, "roomCounts", targetDate);
+        const bookingDocRef = doc(db, "blockedDates", selectedDoc);
 
-        await db.runTransaction(async (transaction) => {
+        await runTransaction(db, async (transaction) => {
             const countSnap = await transaction.get(countDocRef);
             let currentUsed = 0;
-            if (countSnap.exists) {
+            if (countSnap.exists()) {
                 currentUsed = countSnap.data().totalRooms || 0;
             }
 
@@ -341,10 +374,9 @@ document.getElementById("copyReportBtn").onclick = async () => {
     const currentViewDate = calendar.getDate(); 
     const targetYear = currentViewDate.getFullYear();
     const targetMonthStr = String(currentViewDate.getMonth() + 1).padStart(2, '0');
-
     const monthYearStr = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-    // Isolate only the exact visible month's datasets
+    // Isolate events bound to the current display view range
     const events = calendar.getEvents()
       .filter(e => {
         const [year, month] = e.startStr.split('-');
