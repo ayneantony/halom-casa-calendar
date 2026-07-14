@@ -335,12 +335,10 @@ document.getElementById("copyReportBtn").onclick = async () => {
   try {
     const currentViewDate = calendar.getDate(); 
     const targetYear = currentViewDate.getFullYear();
-    // Convert 0-indexed month integer to 2-digit padded string layout matching standard HTML values ("01", "07", etc.)
     const targetMonthStr = String(currentViewDate.getMonth() + 1).padStart(2, '0');
 
     const monthYearStr = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-    // Explicit string splitting filter prevents overlapping calculations with bounding grid rows
     const events = calendar.getEvents()
       .filter(e => {
         const [year, month] = e.startStr.split('-');
