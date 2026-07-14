@@ -2,52 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy"
-content="
-default-src 'self';
-base-uri 'self';
-object-src 'none';
-form-action 'self';
-upgrade-insecure-requests;
-script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net;
-style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
-img-src 'self' data: blob: https:;
-font-src 'self' data: blob: https:;
-connect-src
-https://firestore.googleapis.com
-https://identitytoolkit.googleapis.com
-https://securetoken.googleapis.com
-https://firebaseinstallations.googleapis.com
-https://www.googleapis.com
-https://*.googleapis.com
-wss://firestore.googleapis.com;
-worker-src 'self' blob:;
-manifest-src 'self';
-">
-
-<meta name="referrer"
-content="strict-origin-when-cross-origin">
-<meta http-equiv="X-XSS-Protection" content="0">
-
-<meta http-equiv="Permissions-Policy"
-content="
-camera=(),
-microphone=(),
-geolocation=(),
-payment=(),
-usb=(),
-accelerometer=(),
-gyroscope=()
-">
+<!-- Relaxed CSP specifically tailored to allow iOS WebKit/Safari to communicate freely with Firebase -->
+<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; stroke-src *; img-src * data: blob:;">
 <title>Halom Casa Calendar</title>
 
 <!-- FullCalendar Links -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
 
-<!-- Firebase Compat Libraries (Solves iOS Module Compatibility Issues) -->
+<!-- Firebase Compat Libraries (Highly Stable for Mobile WebKit/Safari) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -66,8 +30,23 @@ gyroscope=()
 
 <div id="loginBox">
 <h2>Login</h2>
-<input id="email" type="email" autocomplete="username" placeholder="Email">
-<input id="password" type="password" autocomplete="current-password" placeholder="Password">
+<!-- Native attributes to disable sneaky iOS auto-capitalization and smart changes -->
+<input 
+  id="email" 
+  type="email" 
+  autocomplete="username" 
+  placeholder="Email"
+  autocapitalize="none" 
+  autocorrect="off" 
+  spellcheck="false">
+<input 
+  id="password" 
+  type="password" 
+  autocomplete="current-password" 
+  placeholder="Password"
+  autocapitalize="none" 
+  autocorrect="off" 
+  spellcheck="false">
 <button id="loginBtn">Login</button>
 <div id="loginMsg"></div>
 </div>
@@ -79,11 +58,7 @@ gyroscope=()
 <div id="bookingModal" class="modal">
 <div class="modal-content">
 <h3>Create Booking</h3>
-<input
-id="guestName"
-placeholder="Guest Name"
-maxlength="50"
-autocomplete="off">
+<input id="guestName" placeholder="Guest Name" maxlength="50" autocomplete="off">
 <select id="bookingType">
 <option value="Full Property">Full Property</option>
 <option value="1 Room">1 Room</option>
@@ -109,7 +84,12 @@ autocomplete="off">
 </div>
 
 <script>
-// Using Firebase Compat layer for safe running environments on mobile browsers
+// Global Error Trap to surface hidden engine exceptions safely on mobile displays
+window.onerror = function(msg, url, line) {
+  alert("System Error: " + msg + "\nLine: " + line);
+  return false;
+};
+
 const firebaseConfig = {
   apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
   authDomain: "halom-casa-booking-calendar.firebaseapp.com",
@@ -119,7 +99,12 @@ const firebaseConfig = {
   appId: "1:171254486073:web:d1ea9a603c5b33d602a9e8"
 };
 
-firebase.initializeApp(firebaseConfig);
+try {
+  firebase.initializeApp(firebaseConfig);
+} catch(e) {
+  alert("Firebase Initialization Failed: " + e.message);
+}
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -148,21 +133,34 @@ document.getElementById("closeViewBtn").onclick = () => closeModal("viewModal");
 loginBtn.onclick = async () => {
     loginMsg.textContent = "";
     loginBtn.disabled = true;
-    try{
-        // Force lower-case comparison to protect against automated iOS shift key capitalization rules
-        await auth.signInWithEmailAndPassword(email.value.trim().toLowerCase(), password.value);
-    }catch(error){
+    try {
+        let clearEmail = email.value.trim().toLowerCase();
+        let clearPassword = password.value;
+        
+        // Scrub iOS smart punctuation conversions back into clean web-safe characters
+        clearPassword = clearPassword.replace(/[\u2013\u2014]/g, "-"); // Fix Smart Hyphens
+        clearPassword = clearPassword.replace(/[\u201C\u201D]/g, '"'); // Fix Smart Double Quotes
+        clearPassword = clearPassword.replace(/[\u2018\u2019]/g, "'"); // Fix Smart Single Quotes
+        clearPassword = clearPassword.replace(/\u00A0/g, ' ');         // Fix Non-Breaking Spaces
+
+        if(!clearEmail || !clearPassword) {
+            alert("Please fill in all fields.");
+            loginBtn.disabled = false;
+            return;
+        }
+
+        await auth.signInWithEmailAndPassword(clearEmail, clearPassword);
+    } catch(error) {
         console.error(error);
-        // Explicitly alerts mobile display screens to raw error rules if failure hits
-        alert("Login Error: " + error.message);
+        alert("Firebase Auth Return Error:\nCode: " + error.code + "\nMessage: " + error.message);
         switch(error.code){
             case "auth/invalid-credential": loginMsg.textContent="Invalid email or password."; break;
             case "auth/invalid-email": loginMsg.textContent="Invalid email address."; break;
             case "auth/too-many-requests": loginMsg.textContent="Too many attempts. Try again later."; break;
             default: loginMsg.textContent="Login failed.";
         }
-    }finally{
-        loginBtn.disabled=false;
+    } finally {
+        loginBtn.disabled = false;
     }
 };
 
@@ -346,6 +344,7 @@ document.getElementById("copyReportBtn").onclick = async () => {
 
     const monthYearStr = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
+    // Isolate only the exact visible month's datasets
     const events = calendar.getEvents()
       .filter(e => {
         const [year, month] = e.startStr.split('-');
