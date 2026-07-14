@@ -43,8 +43,14 @@ gyroscope=()
 ">
 <title>Halom Casa Calendar</title>
 
+<!-- FullCalendar Links -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
+
+<!-- Firebase Compat Libraries (Solves iOS Module Compatibility Issues) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <link rel="stylesheet" href="style.css">
 </head>
@@ -102,11 +108,8 @@ autocomplete="off">
 </div>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-
+<script>
+// Using Firebase Compat layer for safe running environments on mobile browsers
 const firebaseConfig = {
   apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
   authDomain: "halom-casa-booking-calendar.firebaseapp.com",
@@ -115,6 +118,10 @@ const firebaseConfig = {
   messagingSenderId: "171254486073",
   appId: "1:171254486073:web:d1ea9a603c5b33d602a9e8"
 };
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 const ADMIN_EMAIL = "ayneantony4159@gmail.com";
 function getUserColor(email){
@@ -129,10 +136,6 @@ function getUserColor(email){
   return colors[Math.abs(hash) % colors.length];
 }
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
 let calendar;
 let selectedDate=null;
 let selectedDoc=null;
@@ -146,8 +149,12 @@ loginBtn.onclick = async () => {
     loginMsg.textContent = "";
     loginBtn.disabled = true;
     try{
-        await signInWithEmailAndPassword(auth, email.value.trim(), password.value);
+        // Force lower-case comparison to protect against automated iOS shift key capitalization rules
+        await auth.signInWithEmailAndPassword(email.value.trim().toLowerCase(), password.value);
     }catch(error){
+        console.error(error);
+        // Explicitly alerts mobile display screens to raw error rules if failure hits
+        alert("Login Error: " + error.message);
         switch(error.code){
             case "auth/invalid-credential": loginMsg.textContent="Invalid email or password."; break;
             case "auth/invalid-email": loginMsg.textContent="Invalid email address."; break;
@@ -160,11 +167,11 @@ loginBtn.onclick = async () => {
 };
 
 logoutBtn.onclick = async ()=>{
-    await signOut(auth);
+    await auth.signOut();
     location.reload();
 };
 
-onAuthStateChanged(auth,user=>{
+auth.onAuthStateChanged(user=>{
  if(user){
   loginBox.style.display="none";
   calendarContainer.style.display="block";
@@ -212,7 +219,7 @@ function initCalendar(){
 }
 
 function loadBookings(){
- onSnapshot(query(collection(db,"blockedDates")),snap=>{
+ db.collection("blockedDates").onSnapshot(snap=>{
   calendar.removeAllEvents();
   const dayTotals={};
   snap.forEach(d=>{
@@ -261,13 +268,13 @@ saveBooking.onclick = async () => {
         }
 
         const requested = roomsUsed(type);
-        const countDocRef = doc(db, "roomCounts", selectedDate);
-        const newBookingRef = doc(collection(db, "blockedDates"));
+        const countDocRef = db.collection("roomCounts").doc(selectedDate);
+        const newBookingRef = db.collection("blockedDates").doc();
 
-        await runTransaction(db, async (transaction) => {
+        await db.runTransaction(async (transaction) => {
             const countSnap = await transaction.get(countDocRef);
             let currentUsed = 0;
-            if (countSnap.exists()) {
+            if (countSnap.exists) {
                 currentUsed = countSnap.data().totalRooms || 0;
             }
 
@@ -282,7 +289,7 @@ saveBooking.onclick = async () => {
                 bookingType: type,
                 bookedBy: user.email,
                 userId: user.uid,
-                createdAt: serverTimestamp()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
         });
 
@@ -307,13 +314,13 @@ unblockBtn.onclick = async () => {
         const targetType = targetEvent.extendedProps.bookingType;
         const roomsToFree = roomsUsed(targetType);
 
-        const countDocRef = doc(db, "roomCounts", targetDate);
-        const bookingDocRef = doc(db, "blockedDates", selectedDoc);
+        const countDocRef = db.collection("roomCounts").doc(targetDate);
+        const bookingDocRef = db.collection("blockedDates").doc(selectedDoc);
 
-        await runTransaction(db, async (transaction) => {
+        await db.runTransaction(async (transaction) => {
             const countSnap = await transaction.get(countDocRef);
             let currentUsed = 0;
-            if (countSnap.exists()) {
+            if (countSnap.exists) {
                 currentUsed = countSnap.data().totalRooms || 0;
             }
 
