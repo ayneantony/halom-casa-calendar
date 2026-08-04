@@ -325,10 +325,21 @@ function roomsUsed(type){
 }
 
 function initCalendar(){
- calendar=new FullCalendar.Calendar(document.getElementById('calendar'),{
-  initialView:'dayGridMonth',
-  height: 'auto', // Resizes height dynamically across devices
-  handleWindowResize: true, // Recalculates grid layout on window resize or device rotation
+ const isMobile = window.innerWidth <= 600;
+
+ calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+  initialView: isMobile ? 'listMonth' : 'dayGridMonth',
+  headerToolbar: {
+    left: 'prev,next today',
+    center: 'title',
+    right: 'dayGridMonth,listMonth'
+  },
+  buttonText: {
+    dayGridMonth: 'Grid',
+    listMonth: 'List'
+  },
+  height: 'auto',
+  handleWindowResize: true,
   dateClick(info){
    if(!auth.currentUser) return;
    selectedDate=info.dateStr;
