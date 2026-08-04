@@ -86,13 +86,13 @@ gyroscope=()
     <h2>Choose Property</h2>
     <div class="property-card">
         <h3>🏡 Halom Casa - Vagamon</h3>
-        <button id="selectVagamonBtn" style="background: #2ecc71; color: white; border: none; border-radius: 4px; cursor: pointer;">Open Calendar</button>
+        <button id="selectVagamonBtn" style="background: #2ecc71; color: white; border: none; cursor: pointer;">Open Calendar</button>
     </div>
     <div class="property-card">
         <h3>🏙️ Halom Casa - Mulavukad</h3>
-        <button id="selectMulavukadBtn" style="background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">Open Calendar</button>
+        <button id="selectMulavukadBtn" style="background: #3498db; color: white; border: none; cursor: pointer;">Open Calendar</button>
     </div>
-    <button id="propLogoutBtn" style="background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">Logout</button>
+    <button id="propLogoutBtn" style="background: #e74c3c; color: white; border: none; cursor: pointer; margin-top: 10px;">Logout</button>
 </div>
 
 <div id="calendarContainer" style="display:none">
@@ -173,6 +173,29 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Explicit DOM element references for code safety and reliability
+const loginBox = document.getElementById("loginBox");
+const loginBtn = document.getElementById("loginBtn");
+const loginMsg = document.getElementById("loginMsg");
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const logoutBtn = document.getElementById("logoutBtn");
+const copyReportBtn = document.getElementById("copyReportBtn");
+const propertySelectBox = document.getElementById("propertySelectBox");
+const calendarContainer = document.getElementById("calendarContainer");
+const headerProperty = document.getElementById("headerProperty");
+const guestNameInput = document.getElementById("guestName");
+const bookingTypeSelect = document.getElementById("bookingType");
+const saveBookingBtn = document.getElementById("saveBooking");
+const unblockBtn = document.getElementById("unblockBtn");
+
+const vDate = document.getElementById("vDate");
+const vGuest = document.getElementById("vGuest");
+const vType = document.getElementById("vType");
+const vBookedBy = document.getElementById("vBookedBy");
+const vBookedOn = document.getElementById("vBookedOn");
+const vAvailability = document.getElementById("vAvailability");
+
 let calendar;
 let selectedDate = null;
 let selectedDoc = null;
@@ -184,10 +207,6 @@ const propertyNames = {
   mulavukad: "Halom Casa - Mulavukad"
 };
 
-const propertySelectBox = document.getElementById("propertySelectBox");
-const calendarContainer = document.getElementById("calendarContainer");
-const headerProperty = document.getElementById("headerProperty");
-
 function openModal(id){document.getElementById(id).style.display="flex";}
 function closeModal(id){document.getElementById(id).style.display="none";}
 document.getElementById("cancelBooking").onclick = () => closeModal("bookingModal");
@@ -197,8 +216,8 @@ loginBtn.onclick = async () => {
     loginMsg.textContent = "";
     loginBtn.disabled = true;
     try{
-        let clearEmail = email.value.trim().toLowerCase();
-        let clearPassword = password.value;
+        let clearEmail = emailInput.value.trim().toLowerCase();
+        let clearPassword = passwordInput.value;
         
         // Scrub layout punctuation strings back into clean ASCII codes for safe verification
         clearPassword = clearPassword.replace(/[\u2013\u2014]/g, "-");
@@ -252,7 +271,7 @@ onAuthStateChanged(auth, user => {
   propertySelectBox.style.display="none";
   calendarContainer.style.display="none";
   logoutBtn.style.display="none";
-  document.getElementById("copyReportBtn").style.display="none";
+  copyReportBtn.style.display="none";
   headerProperty.style.display="none";
  }
 });
@@ -260,14 +279,14 @@ onAuthStateChanged(auth, user => {
 function showPropertySelectionView() {
     propertySelectBox.style.display = "block";
     calendarContainer.style.display = "none";
-    document.getElementById("copyReportBtn").style.display = "none";
+    copyReportBtn.style.display = "none";
     headerProperty.style.display = "none";
 }
 
 function showCalendarView() {
     propertySelectBox.style.display = "none";
     calendarContainer.style.display = "block";
-    document.getElementById("copyReportBtn").style.display = "block";
+    copyReportBtn.style.display = "block";
     
     headerProperty.innerText = "Property: " + propertyNames[selectedProperty];
     headerProperty.style.display = "block";
@@ -308,6 +327,8 @@ function roomsUsed(type){
 function initCalendar(){
  calendar=new FullCalendar.Calendar(document.getElementById('calendar'),{
   initialView:'dayGridMonth',
+  height: 'auto', // Resizes height dynamically across devices
+  handleWindowResize: true, // Recalculates grid layout on window resize or device rotation
   dateClick(info){
    if(!auth.currentUser) return;
    selectedDate=info.dateStr;
@@ -375,8 +396,8 @@ function loadBookings(){
  });
 }
 
-saveBooking.onclick = async () => {
-    saveBooking.disabled = true;
+saveBookingBtn.onclick = async () => {
+    saveBookingBtn.disabled = true;
     try {
         const user = auth.currentUser;
         if (!selectedProperty) {
@@ -387,12 +408,12 @@ saveBooking.onclick = async () => {
             alert("Invalid date.");
             return;
         }
-        const guest = guestName.value.trim();
+        const guest = guestNameInput.value.trim();
         if(!/^[A-Za-z0-9 .'-]{2,50}$/.test(guest)){
             alert("Invalid guest name.");
             return;
         }
-        const type = bookingType.value;
+        const type = bookingTypeSelect.value;
         const allowedTypes = ["Full Property", "1 Room", "2 Rooms"];
         if (!allowedTypes.includes(type)) {
             alert("Invalid booking type.");
@@ -428,13 +449,13 @@ saveBooking.onclick = async () => {
             });
         });
 
-        guestName.value = "";
+        guestNameInput.value = "";
         closeModal("bookingModal");
     } catch (error) {
         alert(error.message || "Unable to save booking.");
         console.error(error);
     } finally {
-        saveBooking.disabled = false;
+        saveBookingBtn.disabled = false;
     }
 };
 
@@ -474,7 +495,7 @@ unblockBtn.onclick = async () => {
     }
 };
 
-document.getElementById("copyReportBtn").onclick = async () => {
+copyReportBtn.onclick = async () => {
   try {
     if (!calendar || !selectedProperty) return;
 
