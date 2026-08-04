@@ -27,8 +27,7 @@ worker-src 'self' blob:;
 manifest-src 'self';
 ">
 
-<meta name="referrer"
-content="strict-origin-when-cross-origin">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="X-XSS-Protection" content="0">
 
 <meta http-equiv="Permissions-Policy"
@@ -51,16 +50,18 @@ gyroscope=()
 <body>
 
 <header>
-<h3>Halom Casa Calendar</h3>
-<div style="display:flex; gap:10px;">
-  <button id="copyReportBtn" style="width:auto;display:none">Copy Report</button>
-  <button id="logoutBtn" style="width:auto;display:none">Logout</button>
-</div>
+  <div>
+    <h3 style="margin:0; display:inline-block;">Halom Casa Calendar</h3>
+    <div id="headerProperty" style="font-size: 0.85em; color: #f39c12; margin-top: 4px; display: none;"></div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <button id="copyReportBtn" style="width:auto;display:none">Copy Report</button>
+    <button id="logoutBtn" style="width:auto;display:none">Logout</button>
+  </div>
 </header>
 
 <div id="loginBox">
 <h2>Login</h2>
-<!-- Cleaned native attributes to drop auto-correct changes made on iOS devices -->
 <input 
   id="email" 
   type="email" 
@@ -81,8 +82,22 @@ gyroscope=()
 <div id="loginMsg"></div>
 </div>
 
+<div id="propertySelectBox" style="display:none;">
+    <h2>Choose Property</h2>
+    <div class="property-card">
+        <h3>🏡 Halom Casa - Vagamon</h3>
+        <button id="selectVagamonBtn" style="background: #2ecc71; color: white; border: none; border-radius: 4px; cursor: pointer;">Open Calendar</button>
+    </div>
+    <div class="property-card">
+        <h3>🏙️ Halom Casa - Mulavukad</h3>
+        <button id="selectMulavukadBtn" style="background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">Open Calendar</button>
+    </div>
+    <button id="propLogoutBtn" style="background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">Logout</button>
+</div>
+
 <div id="calendarContainer" style="display:none">
-<div id="calendar"></div>
+    <button id="backToPropsBtn" class="back-btn">← Back to Property Selection</button>
+    <div id="calendar"></div>
 </div>
 
 <div id="bookingModal" class="modal">
@@ -159,8 +174,19 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let calendar;
-let selectedDate=null;
-let selectedDoc=null;
+let selectedDate = null;
+let selectedDoc = null;
+let selectedProperty = null; // 'vagamon' or 'mulavukad'
+let unsubscribeSnapshot = null;
+
+const propertyNames = {
+  vagamon: "Halom Casa - Vagamon",
+  mulavukad: "Halom Casa - Mulavukad"
+};
+
+const propertySelectBox = document.getElementById("propertySelectBox");
+const calendarContainer = document.getElementById("calendarContainer");
+const headerProperty = document.getElementById("headerProperty");
 
 function openModal(id){document.getElementById(id).style.display="flex";}
 function closeModal(id){document.getElementById(id).style.display="none";}
@@ -199,25 +225,79 @@ loginBtn.onclick = async () => {
     }
 };
 
-logoutBtn.onclick = async ()=>{
+const performLogout = async () => {
+    if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+    }
+    selectedProperty = null;
     await signOut(auth);
     location.reload();
 };
 
-onAuthStateChanged(auth,user=>{
+logoutBtn.onclick = performLogout;
+document.getElementById("propLogoutBtn").onclick = performLogout;
+
+onAuthStateChanged(auth, user => {
  if(user){
   loginBox.style.display="none";
-  calendarContainer.style.display="block";
   logoutBtn.style.display="block";
-  document.getElementById("copyReportBtn").style.display="block";
-  if(!calendar) initCalendar();
+  if(selectedProperty) {
+      showCalendarView();
+  } else {
+      showPropertySelectionView();
+  }
  }else{
   loginBox.style.display="block";
+  propertySelectBox.style.display="none";
   calendarContainer.style.display="none";
   logoutBtn.style.display="none";
   document.getElementById("copyReportBtn").style.display="none";
+  headerProperty.style.display="none";
  }
 });
+
+function showPropertySelectionView() {
+    propertySelectBox.style.display = "block";
+    calendarContainer.style.display = "none";
+    document.getElementById("copyReportBtn").style.display = "none";
+    headerProperty.style.display = "none";
+}
+
+function showCalendarView() {
+    propertySelectBox.style.display = "none";
+    calendarContainer.style.display = "block";
+    document.getElementById("copyReportBtn").style.display = "block";
+    
+    headerProperty.innerText = "Property: " + propertyNames[selectedProperty];
+    headerProperty.style.display = "block";
+
+    if(!calendar) {
+        initCalendar();
+    } else {
+        calendar.render();
+        loadBookings();
+    }
+}
+
+document.getElementById("selectVagamonBtn").onclick = () => {
+    selectedProperty = "vagamon";
+    showCalendarView();
+};
+
+document.getElementById("selectMulavukadBtn").onclick = () => {
+    selectedProperty = "mulavukad";
+    showCalendarView();
+};
+
+document.getElementById("backToPropsBtn").onclick = () => {
+    if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+    }
+    selectedProperty = null;
+    showPropertySelectionView();
+};
 
 function roomsUsed(type){
  if(type==="Full Property") return 3;
@@ -252,30 +332,45 @@ function initCalendar(){
 }
 
 function loadBookings(){
- onSnapshot(query(collection(db,"blockedDates")),snap=>{
+ if (unsubscribeSnapshot) {
+     unsubscribeSnapshot();
+ }
+ if (!selectedProperty) return;
+
+ unsubscribeSnapshot = onSnapshot(query(collection(db,"blockedDates")),snap=>{
   calendar.removeAllEvents();
   const dayTotals={};
+
+  // Pass 1: Aggregate totals for the active property (with legacy fallback to 'vagamon')
   snap.forEach(d=>{
    const data=d.data();
-   const used=roomsUsed(data.bookingType||"1 Room");
-   dayTotals[data.date]=(dayTotals[data.date]||0)+used;
+   const docProperty = data.property || "vagamon"; 
+   if(docProperty === selectedProperty) {
+       const used=roomsUsed(data.bookingType||"1 Room");
+       dayTotals[data.date]=(dayTotals[data.date]||0)+used;
+   }
   });
+
+  // Pass 2: Display events for the active property
   snap.forEach(d=>{
    const data=d.data();
-   const remaining=Math.max(0,3-(dayTotals[data.date]||0));
-   calendar.addEvent({
-    title:`${String(data.bookingType)} - ${String(data.guestName)}`,
-    start:data.date,
-    allDay:true,
-    color:getUserColor(data.bookedBy || ""),
-    docId:d.id,
-    guestName:data.guestName,
-    bookingType:data.bookingType,
-    bookedBy:data.bookedBy,
-    userId:data.userId,
-    createdAt:data.createdAt,
-    availability: remaining===0 ? "Fully Booked" : remaining+" room(s) available"
-   });
+   const docProperty = data.property || "vagamon";
+   if(docProperty === selectedProperty) {
+       const remaining=Math.max(0,3-(dayTotals[data.date]||0));
+       calendar.addEvent({
+        title:`${String(data.bookingType)} - ${String(data.guestName)}`,
+        start:data.date,
+        allDay:true,
+        color:getUserColor(data.bookedBy || ""),
+        docId:d.id,
+        guestName:data.guestName,
+        bookingType:data.bookingType,
+        bookedBy:data.bookedBy,
+        userId:data.userId,
+        createdAt:data.createdAt,
+        availability: remaining===0 ? "Fully Booked" : remaining+" room(s) available"
+       });
+   }
   });
  });
 }
@@ -284,6 +379,10 @@ saveBooking.onclick = async () => {
     saveBooking.disabled = true;
     try {
         const user = auth.currentUser;
+        if (!selectedProperty) {
+            alert("No property selected.");
+            return;
+        }
         if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
             alert("Invalid date.");
             return;
@@ -301,7 +400,9 @@ saveBooking.onclick = async () => {
         }
 
         const requested = roomsUsed(type);
-        const countDocRef = doc(db, "roomCounts", selectedDate);
+        // Isolate atomic transactions per property and date
+        const countDocKey = `${selectedProperty}_${selectedDate}`;
+        const countDocRef = doc(db, "roomCounts", countDocKey);
         const newBookingRef = doc(collection(db, "blockedDates"));
 
         await runTransaction(db, async (transaction) => {
@@ -317,6 +418,7 @@ saveBooking.onclick = async () => {
 
             transaction.set(countDocRef, { totalRooms: currentUsed + requested }, { merge: true });
             transaction.set(newBookingRef, {
+                property: selectedProperty,
                 date: selectedDate,
                 guestName: guest,
                 bookingType: type,
@@ -347,7 +449,8 @@ unblockBtn.onclick = async () => {
         const targetType = targetEvent.extendedProps.bookingType;
         const roomsToFree = roomsUsed(targetType);
 
-        const countDocRef = doc(db, "roomCounts", targetDate);
+        const countDocKey = `${selectedProperty}_${targetDate}`;
+        const countDocRef = doc(db, "roomCounts", countDocKey);
         const bookingDocRef = doc(db, "blockedDates", selectedDoc);
 
         await runTransaction(db, async (transaction) => {
@@ -373,6 +476,8 @@ unblockBtn.onclick = async () => {
 
 document.getElementById("copyReportBtn").onclick = async () => {
   try {
+    if (!calendar || !selectedProperty) return;
+
     const currentViewDate = calendar.getDate(); 
     const targetYear = currentViewDate.getFullYear();
     const targetMonthStr = String(currentViewDate.getMonth() + 1).padStart(2, '0');
@@ -404,7 +509,7 @@ document.getElementById("copyReportBtn").onclick = async () => {
     }).replace(',', '');
 
     const reportText = [
-      `Halom Casa Bookings - ${monthYearStr}\n`,
+      `Halom Casa Bookings (${propertyNames[selectedProperty]}) - ${monthYearStr}\n`,
       bookingLines.length > 0 ? bookingLines.join('\n') : "No bookings found for this month.",
       `\nTotal Bookings: ${events.length}`,
       `\nGenerated on: ${nowStr}`
