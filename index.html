@@ -12,9 +12,9 @@ object-src 'none';
 form-action 'self';
 upgrade-insecure-requests;
 script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net;
-style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
 img-src 'self' data: blob: https:;
-font-src 'self' data: blob: https:;
+font-src 'self' data: blob: https: https://fonts.gstatic.com;
 connect-src
 https://firestore.googleapis.com
 https://identitytoolkit.googleapis.com
@@ -29,7 +29,6 @@ manifest-src 'self';
 
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="X-XSS-Protection" content="0">
-
 <meta http-equiv="Permissions-Policy"
 content="
 camera=(),
@@ -40,8 +39,9 @@ usb=(),
 accelerometer=(),
 gyroscope=()
 ">
-<title>Halom Casa Calendar</title>
+<title>Halom Casa Calendar — Apex Pro Edition</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
 
@@ -50,92 +50,105 @@ gyroscope=()
 <body>
 
 <header>
-  <div>
-    <h3 style="margin:0; display:inline-block;">Halom Casa Calendar</h3>
-    <div id="headerProperty" style="font-size: 0.85em; color: #f39c12; margin-top: 4px; display: none;"></div>
+  <div class="header-brand">
+    <div class="shield-logo-icon">HC</div>
+    <div class="header-brand-text">
+        <span class="brand-title">Halom</span>
+        <span class="brand-subtitle">Casa</span>
+    </div>
+    <div id="headerProperty" style="display: none;"></div>
   </div>
-  <div style="display:flex; gap:10px;">
-    <button id="copyReportBtn" style="width:auto;display:none">Copy Report</button>
-    <button id="logoutBtn" style="width:auto;display:none">Logout</button>
+  <div class="header-actions">
+    <select id="themeSelector">
+        <option value="dark">Apex Dark</option>
+        <option value="light">Speed Light</option>
+    </select>
+    <button id="copyReportBtn" style="display:none">Report</button>
+    <button id="logoutBtn" class="back-btn" style="display:none; margin:0;">Logout</button>
   </div>
 </header>
 
 <div id="loginBox">
-<h2>Login</h2>
-<input 
-  id="email" 
-  type="email" 
-  autocomplete="username" 
-  placeholder="Email"
-  autocapitalize="none" 
-  autocorrect="off" 
-  spellcheck="false">
-<input 
-  id="password" 
-  type="password" 
-  autocomplete="current-password" 
-  placeholder="Password"
-  autocapitalize="none" 
-  autocorrect="off" 
-  spellcheck="false">
-<button id="loginBtn">Login</button>
-<div id="loginMsg"></div>
+    <h2>Sign In</h2>
+    <input 
+      id="email" 
+      type="email" 
+      autocomplete="username" 
+      placeholder="Email address"
+      autocapitalize="none" 
+      autocorrect="off" 
+      spellcheck="false">
+    <input 
+      id="password" 
+      type="password" 
+      autocomplete="current-password" 
+      placeholder="Password"
+      autocapitalize="none" 
+      autocorrect="off" 
+      spellcheck="false">
+    <button id="loginBtn" style="width:100%; margin-top:10px;">Log In</button>
+    <div id="loginMsg" style="margin-top:12px; font-size:13px; font-weight:600;"></div>
 </div>
 
 <div id="propertySelectBox" style="display:none;">
-    <h2>Choose Property</h2>
+    <h2>Select Property</h2>
     <div class="property-card">
-        <h3>🏡 Halom Casa - Vagamon</h3>
-        <button id="selectVagamonBtn" style="background: #2ecc71; color: white; border: none; cursor: pointer;">Open Calendar</button>
+        <h3>Halom Casa - Vagamon</h3>
+        <button id="selectVagamonBtn" style="width:100%;">Select Property</button>
     </div>
     <div class="property-card">
-        <h3>🏙️ Halom Casa - Mulavukad</h3>
-        <button id="selectMulavukadBtn" style="background: #3498db; color: white; border: none; cursor: pointer;">Open Calendar</button>
+        <h3>Halom Casa - Mulavukad</h3>
+        <button id="selectMulavukadBtn" style="width:100%;">Select Property</button>
     </div>
-    <button id="propLogoutBtn" style="background: #e74c3c; color: white; border: none; cursor: pointer; margin-top: 10px;">Logout</button>
+    <div style="margin-top: 15px;">
+        <button id="propLogoutBtn" class="back-btn">Logout</button>
+    </div>
 </div>
 
 <div id="calendarContainer" style="display:none">
-    <button id="backToPropsBtn" class="back-btn">← Back to Property Selection</button>
+    <button id="backToPropsBtn" class="back-btn">← Switch Property</button>
     <div id="calendar"></div>
 </div>
 
 <div id="bookingModal" class="modal">
-<div class="modal-content">
-<h3>Create Booking</h3>
-<input
-id="guestName"
-placeholder="Guest Name"
-maxlength="50"
-autocomplete="off"
-pattern="[A-Za-z0-9 .'-]{2,50}"
-title="Letters, spaces, numbers and standard dashes only.">
-<select id="bookingType">
-<option value="Full Property">Full Property</option>
-<option value="1 Room">1 Room</option>
-<option value="2 Rooms">2 Rooms</option>
-</select>
-<button id="saveBooking">Save Booking</button>
-<button id="cancelBooking">Cancel</button>
-</div>
+    <div class="modal-content">
+        <h3>New Booking</h3>
+        <input
+          id="guestName"
+          placeholder="Guest Name"
+          maxlength="50"
+          autocomplete="off"
+          pattern="[A-Za-z0-9 .'-]{2,50}"
+          title="Letters, spaces, numbers and standard dashes only.">
+        <select id="bookingType">
+          <option value="Full Property">Full Property</option>
+          <option value="1 Room">1 Room</option>
+          <option value="2 Rooms">2 Rooms</option>
+        </select>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top: 10px;">
+            <button id="saveBooking" style="width:100%;">Confirm Booking</button>
+            <button id="cancelBooking" class="back-btn" style="width:100%; margin:0;">Cancel</button>
+        </div>
+    </div>
 </div>
 
 <div id="viewModal" class="modal">
-<div class="modal-content">
-<h3>Booking Details</h3>
-<p><b>Date:</b> <span id="vDate"></span></p>
-<p><b>Guest:</b> <span id="vGuest"></span></p>
-<p><b>Type:</b> <span id="vType"></span></p>
-<p><b>Booked By:</b> <span id="vBookedBy"></span></p>
-<p><b>Booked On:</b> <span id="vBookedOn"></span></p>
-<p><b>Availability:</b> <span id="vAvailability"></span></p>
-<button id="unblockBtn">Delete Booking</button>
-<button id="closeViewBtn">Close</button>
-</div>
+    <div class="modal-content">
+        <h3>Booking Summary</h3>
+        <p><b>Date:</b> <span id="vDate"></span></p>
+        <p><b>Guest:</b> <span id="vGuest"></span></p>
+        <p><b>Type:</b> <span id="vType"></span></p>
+        <p><b>Booked By:</b> <span id="vBookedBy"></span></p>
+        <p><b>Booked On:</b> <span id="vBookedOn"></span></p>
+        <p><b>Availability:</b> <span id="vAvailability"></span></p>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top: 10px;">
+            <button id="unblockBtn" style="background: #ef4444; width:100%;">Remove Booking</button>
+            <button id="closeViewBtn" class="back-btn" style="width:100%; margin:0;">Close</button>
+        </div>
+    </div>
 </div>
 
 <script>
-// Global tracking monitor hook for edge-case mobile exceptions
 window.onerror = function(msg, url, line) {
   alert("System Error: " + msg + "\nLine: " + line);
   return false;
@@ -146,6 +159,16 @@ window.onerror = function(msg, url, line) {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 import { getFirestore, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+const themeSelector = document.getElementById("themeSelector");
+const applyTheme = (theme) => {
+    document.body.className = theme === 'light' ? 'light-theme' : '';
+    themeSelector.value = theme;
+    localStorage.setItem('halom_apex_theme', theme);
+};
+const savedTheme = localStorage.getItem('halom_apex_theme') || 'dark';
+applyTheme(savedTheme);
+themeSelector.onchange = (e) => applyTheme(e.target.value);
 
 const firebaseConfig = {
   apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
@@ -159,9 +182,9 @@ const firebaseConfig = {
 const ADMIN_EMAIL = "ayneantony4159@gmail.com";
 function getUserColor(email){
   if(email === ADMIN_EMAIL){
-    return "#e74c3c";
+    return "#2563eb";
   }
-  const colors = ["#3498db", "#2ecc71", "#9b59b6", "#f39c12", "#1abc9c", "#e84393", "#34495e", "#16a085"];
+  const colors = ["#ff2a4b", "#059669", "#7c3aed", "#d97706", "#0284c7"];
   let hash = 0;
   for(let i = 0; i < email.length; i++){
     hash += email.charCodeAt(i);
@@ -173,7 +196,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Explicit DOM element references for code safety and reliability
 const loginBox = document.getElementById("loginBox");
 const loginBtn = document.getElementById("loginBtn");
 const loginMsg = document.getElementById("loginMsg");
@@ -199,7 +221,7 @@ const vAvailability = document.getElementById("vAvailability");
 let calendar;
 let selectedDate = null;
 let selectedDoc = null;
-let selectedProperty = null; // 'vagamon' or 'mulavukad'
+let selectedProperty = null;
 let unsubscribeSnapshot = null;
 
 const propertyNames = {
@@ -219,7 +241,6 @@ loginBtn.onclick = async () => {
         let clearEmail = emailInput.value.trim().toLowerCase();
         let clearPassword = passwordInput.value;
         
-        // Scrub layout punctuation strings back into clean ASCII codes for safe verification
         clearPassword = clearPassword.replace(/[\u2013\u2014]/g, "-");
         clearPassword = clearPassword.replace(/[\u201C\u201D]/g, '"');
         clearPassword = clearPassword.replace(/[\u2018\u2019]/g, "'");
@@ -260,7 +281,7 @@ document.getElementById("propLogoutBtn").onclick = performLogout;
 onAuthStateChanged(auth, user => {
  if(user){
   loginBox.style.display="none";
-  logoutBtn.style.display="block";
+  logoutBtn.style.display="inline-flex";
   if(selectedProperty) {
       showCalendarView();
   } else {
@@ -286,10 +307,10 @@ function showPropertySelectionView() {
 function showCalendarView() {
     propertySelectBox.style.display = "none";
     calendarContainer.style.display = "block";
-    copyReportBtn.style.display = "block";
+    copyReportBtn.style.display = "inline-flex";
     
-    headerProperty.innerText = "Property: " + propertyNames[selectedProperty];
-    headerProperty.style.display = "block";
+    headerProperty.innerText = propertyNames[selectedProperty];
+    headerProperty.style.display = "inline-block";
 
     if(!calendar) {
         initCalendar();
@@ -355,7 +376,7 @@ function initCalendar(){
    vBookedOn.innerText=e.createdAt && e.createdAt.toDate ? e.createdAt.toDate().toLocaleString() : "-";
    vAvailability.innerText=e.availability || "";
    const user=auth.currentUser;
-   unblockBtn.style.display=(user.email===ADMIN_EMAIL || user.uid===e.userId) ? "block":"none";
+   unblockBtn.style.display=(user.email===ADMIN_EMAIL || user.uid===e.userId) ? "inline-flex":"none";
    openModal("viewModal");
   }
  });
@@ -373,7 +394,6 @@ function loadBookings(){
   calendar.removeAllEvents();
   const dayTotals={};
 
-  // Pass 1: Aggregate totals for the active property (with legacy fallback to 'vagamon')
   snap.forEach(d=>{
    const data=d.data();
    const docProperty = data.property || "vagamon"; 
@@ -383,7 +403,6 @@ function loadBookings(){
    }
   });
 
-  // Pass 2: Display events for the active property
   snap.forEach(d=>{
    const data=d.data();
    const docProperty = data.property || "vagamon";
@@ -393,7 +412,8 @@ function loadBookings(){
         title:`${String(data.bookingType)} - ${String(data.guestName)}`,
         start:data.date,
         allDay:true,
-        color:getUserColor(data.bookedBy || ""),
+        backgroundColor:getUserColor(data.bookedBy || ""),
+        textColor: "#ffffff",
         docId:d.id,
         guestName:data.guestName,
         bookingType:data.bookingType,
@@ -432,7 +452,6 @@ saveBookingBtn.onclick = async () => {
         }
 
         const requested = roomsUsed(type);
-        // Isolate atomic transactions per property and date
         const countDocKey = `${selectedProperty}_${selectedDate}`;
         const countDocRef = doc(db, "roomCounts", countDocKey);
         const newBookingRef = doc(collection(db, "blockedDates"));
@@ -511,15 +530,16 @@ copyReportBtn.onclick = async () => {
     if (!calendar || !selectedProperty) return;
 
     const currentViewDate = calendar.getDate(); 
-    const targetYear = currentViewDate.getFullYear();
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const currentMonthName = monthNames[currentViewDate.getMonth()];
+    const currentYear = currentViewDate.getFullYear();
+    const targetMonthYearStr = `${currentMonthName} ${currentYear}`;
     const targetMonthStr = String(currentViewDate.getMonth() + 1).padStart(2, '0');
-    const monthYearStr = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-    // Isolate active dataset items strictly parsing matching calendar range strings
     const events = calendar.getEvents()
       .filter(e => {
         const [year, month] = e.startStr.split('-');
-        return year === String(targetYear) && month === targetMonthStr;
+        return year === String(currentYear) && month === targetMonthStr;
       })
       .sort((a, b) => a.startStr.localeCompare(b.startStr));
 
@@ -531,24 +551,30 @@ copyReportBtn.onclick = async () => {
       return `${formattedDate} - ${type} - ${guest}`;
     });
 
-    const nowStr = new Date().toLocaleString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }).replace(',', '');
+    const now = new Date();
+    const genDay = String(now.getDate()).padStart(2, '0');
+    const genMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const genYear = now.getFullYear();
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const genTime = `${genDay}/${genMonth}/${genYear} ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
     const reportText = [
-      `Halom Casa Bookings (${propertyNames[selectedProperty]}) - ${monthYearStr}\n`,
-      bookingLines.length > 0 ? bookingLines.join('\n') : "No bookings found for this month.",
+      `Halom Casa Bookings (${propertyNames[selectedProperty]}) - ${targetMonthYearStr}\n`,
+      bookingLines.join('\n'),
       `\nTotal Bookings: ${events.length}`,
-      `\nGenerated on: ${nowStr}`
+      `\nGenerated on: ${genTime}`
     ].join('\n');
 
     await navigator.clipboard.writeText(reportText);
-    alert("Report copied to clipboard successfully!");
+    const originalText = copyReportBtn.innerHTML;
+    copyReportBtn.innerHTML = "<span>Copied!</span>";
+    setTimeout(() => {
+        copyReportBtn.innerHTML = originalText;
+    }, 2000);
   } catch (err) {
     console.error("Failed to copy report: ", err);
     alert("Could not copy report to clipboard.");
