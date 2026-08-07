@@ -243,6 +243,7 @@ document.getElementById("cancelBooking").onclick = () => closeModal("bookingModa
 document.getElementById("closeViewBtn").onclick = () => closeModal("viewModal");
 
 loginBtn.onclick = async () => {
+    triggerFullscreen(); // Triggers fullscreen automatically on login click
     loginMsg.textContent = "";
     loginBtn.disabled = true;
     try{
