@@ -178,6 +178,16 @@ function triggerFullscreen() {
     }
 }
 
+// Attempt fullscreen immediately when page loads
+window.addEventListener('DOMContentLoaded', () => {
+    triggerFullscreen();
+});
+
+// Fallback: Trigger fullscreen on first click anywhere if blocked by browser policy
+document.body.addEventListener('click', () => {
+    triggerFullscreen();
+}, { once: true });
+
 const firebaseConfig = {
   apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
   authDomain: "halom-casa-booking-calendar.firebaseapp.com",
@@ -243,7 +253,7 @@ document.getElementById("cancelBooking").onclick = () => closeModal("bookingModa
 document.getElementById("closeViewBtn").onclick = () => closeModal("viewModal");
 
 loginBtn.onclick = async () => {
-    triggerFullscreen(); // Triggers fullscreen automatically on login click
+    triggerFullscreen(); 
     loginMsg.textContent = "";
     loginBtn.disabled = true;
     try{
