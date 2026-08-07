@@ -39,7 +39,7 @@ usb=(),
 accelerometer=(),
 gyroscope=()
 ">
-<title>Halom Casa Calendar </title>
+<title>Halom Casa Calendar — Apex Pro Edition</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
@@ -169,6 +169,14 @@ const applyTheme = (theme) => {
 const savedTheme = localStorage.getItem('halom_apex_theme') || 'dark';
 applyTheme(savedTheme);
 themeSelector.onchange = (e) => applyTheme(e.target.value);
+
+function triggerFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch((err) => {
+            console.log("Fullscreen request error:", err.message);
+        });
+    }
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
@@ -321,11 +329,13 @@ function showCalendarView() {
 }
 
 document.getElementById("selectVagamonBtn").onclick = () => {
+    triggerFullscreen();
     selectedProperty = "vagamon";
     showCalendarView();
 };
 
 document.getElementById("selectMulavukadBtn").onclick = () => {
+    triggerFullscreen();
     selectedProperty = "mulavukad";
     showCalendarView();
 };
