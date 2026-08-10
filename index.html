@@ -73,23 +73,25 @@ fullscreen=(self)
 
 <div id="loginBox">
     <h2>Sign In</h2>
-    <input 
-      id="email" 
-      type="email" 
-      autocomplete="username" 
-      placeholder="Email address"
-      autocapitalize="none" 
-      autocorrect="off" 
-      spellcheck="false">
-    <input 
-      id="password" 
-      type="password" 
-      autocomplete="current-password" 
-      placeholder="Password"
-      autocapitalize="none" 
-      autocorrect="off" 
-      spellcheck="false">
-    <button id="loginBtn" style="width:100%; margin-top:10px;">Log In</button>
+    <form id="loginForm">
+        <input 
+          id="email" 
+          type="email" 
+          autocomplete="username" 
+          placeholder="Email address"
+          autocapitalize="none" 
+          autocorrect="off" 
+          spellcheck="false">
+        <input 
+          id="password" 
+          type="password" 
+          autocomplete="current-password" 
+          placeholder="Password"
+          autocapitalize="none" 
+          autocorrect="off" 
+          spellcheck="false">
+        <button id="loginBtn" type="submit" style="width:100%; margin-top:10px;">Log In</button>
+    </form>
     <div id="loginMsg" style="margin-top:12px; font-size:13px; font-weight:600;"></div>
 </div>
 
@@ -208,6 +210,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const loginBox = document.getElementById("loginBox");
+const loginForm = document.getElementById("loginForm");
 const loginBtn = document.getElementById("loginBtn");
 const loginMsg = document.getElementById("loginMsg");
 const emailInput = document.getElementById("email");
@@ -245,7 +248,8 @@ function closeModal(id){document.getElementById(id).style.display="none";}
 document.getElementById("cancelBooking").onclick = () => closeModal("bookingModal");
 document.getElementById("closeViewBtn").onclick = () => closeModal("viewModal");
 
-loginBtn.onclick = async () => {
+loginForm.onsubmit = async (e) => {
+    e.preventDefault();
     triggerFullscreen(); 
     loginMsg.textContent = "";
     loginBtn.disabled = true;
