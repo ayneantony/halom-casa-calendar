@@ -1,57 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="X-Content-Type-Options" content="nosniff">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy"
-content="
-default-src 'self';
-base-uri 'self';
-object-src 'none';
-form-action 'self';
-upgrade-insecure-requests;
-script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net;
-style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
-img-src 'self' data: blob: https:;
-font-src 'self' data: blob: https: https://fonts.gstatic.com;
-connect-src
-https://firestore.googleapis.com
-https://identitytoolkit.googleapis.com
-https://securetoken.googleapis.com
-https://firebaseinstallations.googleapis.com
-https://www.googleapis.com
-https://*.googleapis.com
-wss://firestore.googleapis.com;
-worker-src 'self' blob:;
-manifest-src 'self';
-">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=()">
+  
+  <!-- Hardened Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    base-uri 'self';
+    object-src 'none';
+    form-action 'self';
+    frame-ancestors 'none';
+    upgrade-insecure-requests;
+    script-src 'self' https://www.gstatic.com https://cdn.jsdelivr.net;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
+    img-src 'self' data: blob: https:;
+    font-src 'self' data: blob: https://fonts.gstatic.com;
+    connect-src 'self' 
+      https://firestore.googleapis.com 
+      https://identitytoolkit.googleapis.com 
+      https://securetoken.googleapis.com 
+      https://firebaseinstallations.googleapis.com 
+      https://www.googleapis.com 
+      wss://firestore.googleapis.com;
+    worker-src 'self' blob:;
+    manifest-src 'self';
+  ">
 
-<meta name="referrer" content="strict-origin-when-cross-origin">
-<meta http-equiv="X-XSS-Protection" content="0">
-<meta http-equiv="Permissions-Policy"
-content="
-camera=(),
-microphone=(),
-geolocation=(),
-payment=(),
-usb=(),
-accelerometer=(),
-gyroscope=()
-">
-<title>Halom Casa Calendar </title>
+  <title>Halom Casa Booking System</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
-
-<link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
   <div class="header-brand">
-    <div class="shield-logo-icon">HC</div>
+    <div class="shield-logo-icon" aria-hidden="true">HC</div>
     <div class="header-brand-text">
         <span class="brand-title">Halom</span>
         <span class="brand-subtitle">Casa</span>
@@ -59,82 +51,94 @@ gyroscope=()
     <div id="headerProperty" style="display: none;"></div>
   </div>
   <div class="header-actions">
-    <select id="themeSelector">
+    <select id="themeSelector" aria-label="Select Theme">
         <option value="dark">Apex Dark</option>
         <option value="light">Speed Light</option>
     </select>
-    <button id="copyReportBtn" style="display:none">Report</button>
-    <button id="logoutBtn" class="back-btn" style="display:none; margin:0;">Logout</button>
+    <button id="copyReportBtn" type="button" style="display:none;">Report</button>
+    <button id="logoutBtn" type="button" class="back-btn" style="display:none; margin:0;">Logout</button>
   </div>
 </header>
 
-<div id="loginBox">
-    <h2>Sign In</h2>
-    <input 
-      id="email" 
-      type="email" 
-      autocomplete="username" 
-      placeholder="Email address"
-      autocapitalize="none" 
-      autocorrect="off" 
-      spellcheck="false">
-    <input 
-      id="password" 
-      type="password" 
-      autocomplete="current-password" 
-      placeholder="Password"
-      autocapitalize="none" 
-      autocorrect="off" 
-      spellcheck="false">
-    <button id="loginBtn" style="width:100%; margin-top:10px;">Log In</button>
-    <div id="loginMsg" style="margin-top:12px; font-size:13px; font-weight:600;"></div>
-</div>
+<main id="appContainer">
+  <!-- Login Container -->
+  <div id="loginBox">
+      <h2>Sign In</h2>
+      <form id="loginForm" onsubmit="return false;">
+        <input 
+          id="email" 
+          type="email" 
+          required
+          autocomplete="username" 
+          placeholder="Email address"
+          autocapitalize="none" 
+          autocorrect="off" 
+          spellcheck="false">
+        <input 
+          id="password" 
+          type="password" 
+          required
+          autocomplete="current-password" 
+          placeholder="Password"
+          autocapitalize="none" 
+          autocorrect="off" 
+          spellcheck="false">
+        <button id="loginBtn" type="submit" style="width:100%; margin-top:10px;">Log In</button>
+      </form>
+      <div id="loginMsg" role="alert" style="margin-top:12px; font-size:13px; font-weight:600; color: var(--accent-red);"></div>
+  </div>
 
-<div id="propertySelectBox" style="display:none;">
-    <h2>Select Property</h2>
-    <div class="property-card">
-        <h3>Halom Casa - Vagamon</h3>
-        <button id="selectVagamonBtn" style="width:100%;">Select Property</button>
-    </div>
-    <div class="property-card">
-        <h3>Halom Casa - Mulavukad</h3>
-        <button id="selectMulavukadBtn" style="width:100%;">Select Property</button>
-    </div>
-    <div style="margin-top: 15px;">
-        <button id="propLogoutBtn" class="back-btn">Logout</button>
-    </div>
-</div>
+  <!-- Property Selection Box -->
+  <div id="propertySelectBox" style="display:none;">
+      <h2>Select Property</h2>
+      <div class="property-card">
+          <h3>Halom Casa - Vagamon</h3>
+          <button id="selectVagamonBtn" type="button" style="width:100%;">Select Property</button>
+      </div>
+      <div class="property-card">
+          <h3>Halom Casa - Mulavukad</h3>
+          <button id="selectMulavukadBtn" type="button" style="width:100%;">Select Property</button>
+      </div>
+      <div style="margin-top: 15px;">
+          <button id="propLogoutBtn" type="button" class="back-btn">Logout</button>
+      </div>
+  </div>
 
-<div id="calendarContainer" style="display:none">
-    <button id="backToPropsBtn" class="back-btn">← Switch Property</button>
-    <div id="calendar"></div>
-</div>
+  <!-- Calendar Interface -->
+  <div id="calendarContainer" style="display:none">
+      <button id="backToPropsBtn" type="button" class="back-btn">← Switch Property</button>
+      <div id="calendar"></div>
+  </div>
+</main>
 
-<div id="bookingModal" class="modal">
+<!-- Booking Modal -->
+<div id="bookingModal" class="modal" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
     <div class="modal-content">
-        <h3>New Booking</h3>
+        <h3 id="modalTitle">New Booking</h3>
         <input
           id="guestName"
+          type="text"
           placeholder="Guest Name"
           maxlength="50"
           autocomplete="off"
           pattern="[A-Za-z0-9 .'-]{2,50}"
           title="Letters, spaces, numbers and standard dashes only.">
-        <select id="bookingType">
+        <select id="bookingType" aria-label="Booking Type">
           <option value="Full Property">Full Property</option>
           <option value="1 Room">1 Room</option>
           <option value="2 Rooms">2 Rooms</option>
         </select>
         <div style="display:flex; flex-direction:column; gap:8px; margin-top: 10px;">
-            <button id="saveBooking" style="width:100%;">Confirm Booking</button>
-            <button id="cancelBooking" class="back-btn" style="width:100%; margin:0;">Cancel</button>
+            <button id="saveBooking" type="button" style="width:100%;">Confirm Booking</button>
+            <button id="cancelBooking" type="button" class="back-btn" style="width:100%; margin:0;">Cancel</button>
         </div>
     </div>
 </div>
 
-<div id="viewModal" class="modal">
+<!-- View Booking Modal -->
+<div id="viewModal" class="modal" role="dialog" aria-labelledby="viewModalTitle" aria-modal="true">
     <div class="modal-content">
-        <h3>Booking Summary</h3>
+        <h3 id="viewModalTitle">Booking Summary</h3>
         <p><b>Date:</b> <span id="vDate"></span></p>
         <p><b>Guest:</b> <span id="vGuest"></span></p>
         <p><b>Type:</b> <span id="vType"></span></p>
@@ -142,465 +146,14 @@ gyroscope=()
         <p><b>Booked On:</b> <span id="vBookedOn"></span></p>
         <p><b>Availability:</b> <span id="vAvailability"></span></p>
         <div style="display:flex; flex-direction:column; gap:8px; margin-top: 10px;">
-            <button id="unblockBtn" style="background: #ef4444; width:100%;">Remove Booking</button>
-            <button id="closeViewBtn" class="back-btn" style="width:100%; margin:0;">Close</button>
+            <button id="unblockBtn" type="button" style="background: #ef4444; width:100%;">Remove Booking</button>
+            <button id="closeViewBtn" type="button" class="back-btn" style="width:100%; margin:0;">Close</button>
         </div>
     </div>
 </div>
 
-<script>
-window.onerror = function(msg, url, line) {
-  alert("System Error: " + msg + "\nLine: " + line);
-  return false;
-};
-</script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
+<script type="module" src="app.js"></script>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-
-const themeSelector = document.getElementById("themeSelector");
-const applyTheme = (theme) => {
-    document.body.className = theme === 'light' ? 'light-theme' : '';
-    themeSelector.value = theme;
-    localStorage.setItem('halom_apex_theme', theme);
-};
-const savedTheme = localStorage.getItem('halom_apex_theme') || 'dark';
-applyTheme(savedTheme);
-themeSelector.onchange = (e) => applyTheme(e.target.value);
-
-function triggerFullscreen() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch((err) => {
-            console.log("Fullscreen request error:", err.message);
-        });
-    }
-}
-
-// Attempt fullscreen immediately when page loads
-window.addEventListener('DOMContentLoaded', () => {
-    triggerFullscreen();
-});
-
-// Fallback: Trigger fullscreen on first click anywhere if blocked by browser policy
-document.body.addEventListener('click', () => {
-    triggerFullscreen();
-}, { once: true });
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
-  authDomain: "halom-casa-booking-calendar.firebaseapp.com",
-  projectId: "halom-casa-booking-calendar",
-  storageBucket: "halom-casa-booking-calendar.firebasestorage.app",
-  messagingSenderId: "171254486073",
-  appId: "1:171254486073:web:d1ea9a603c5b33d602a9e8"
-};
-
-const ADMIN_EMAIL = "ayneantony4159@gmail.com";
-function getUserColor(email){
-  if(email === ADMIN_EMAIL){
-    return "#2563eb";
-  }
-  const colors = ["#ff2a4b", "#059669", "#7c3aed", "#d97706", "#0284c7"];
-  let hash = 0;
-  for(let i = 0; i < email.length; i++){
-    hash += email.charCodeAt(i);
-  }
-  return colors[Math.abs(hash) % colors.length];
-}
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-const loginBox = document.getElementById("loginBox");
-const loginBtn = document.getElementById("loginBtn");
-const loginMsg = document.getElementById("loginMsg");
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const logoutBtn = document.getElementById("logoutBtn");
-const copyReportBtn = document.getElementById("copyReportBtn");
-const propertySelectBox = document.getElementById("propertySelectBox");
-const calendarContainer = document.getElementById("calendarContainer");
-const headerProperty = document.getElementById("headerProperty");
-const guestNameInput = document.getElementById("guestName");
-const bookingTypeSelect = document.getElementById("bookingType");
-const saveBookingBtn = document.getElementById("saveBooking");
-const unblockBtn = document.getElementById("unblockBtn");
-
-const vDate = document.getElementById("vDate");
-const vGuest = document.getElementById("vGuest");
-const vType = document.getElementById("vType");
-const vBookedBy = document.getElementById("vBookedBy");
-const vBookedOn = document.getElementById("vBookedOn");
-const vAvailability = document.getElementById("vAvailability");
-
-let calendar;
-let selectedDate = null;
-let selectedDoc = null;
-let selectedProperty = null;
-let unsubscribeSnapshot = null;
-
-const propertyNames = {
-  vagamon: "Halom Casa - Vagamon",
-  mulavukad: "Halom Casa - Mulavukad"
-};
-
-function openModal(id){document.getElementById(id).style.display="flex";}
-function closeModal(id){document.getElementById(id).style.display="none";}
-document.getElementById("cancelBooking").onclick = () => closeModal("bookingModal");
-document.getElementById("closeViewBtn").onclick = () => closeModal("viewModal");
-
-loginBtn.onclick = async () => {
-    triggerFullscreen(); 
-    loginMsg.textContent = "";
-    loginBtn.disabled = true;
-    try{
-        let clearEmail = emailInput.value.trim().toLowerCase();
-        let clearPassword = passwordInput.value;
-        
-        clearPassword = clearPassword.replace(/[\u2013\u2014]/g, "-");
-        clearPassword = clearPassword.replace(/[\u201C\u201D]/g, '"');
-        clearPassword = clearPassword.replace(/[\u2018\u2019]/g, "'");
-        clearPassword = clearPassword.replace(/\u00A0/g, ' ');
-
-        if(!clearEmail || !clearPassword) {
-            alert("Please fill in all fields.");
-            loginBtn.disabled = false;
-            return;
-        }
-
-        await signInWithEmailAndPassword(auth, clearEmail, clearPassword);
-    }catch(error){
-        switch(error.code){
-            case "auth/invalid-credential": loginMsg.textContent="Invalid email or password."; break;
-            case "auth/invalid-email": loginMsg.textContent="Invalid email address."; break;
-            case "auth/too-many-requests": loginMsg.textContent="Too many attempts. Try again later."; break;
-            default: loginMsg.textContent="Login failed.";
-        }
-    }finally{
-        loginBtn.disabled=false;
-    }
-};
-
-const performLogout = async () => {
-    if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = null;
-    }
-    selectedProperty = null;
-    await signOut(auth);
-    location.reload();
-};
-
-logoutBtn.onclick = performLogout;
-document.getElementById("propLogoutBtn").onclick = performLogout;
-
-onAuthStateChanged(auth, user => {
- if(user){
-  loginBox.style.display="none";
-  logoutBtn.style.display="inline-flex";
-  if(selectedProperty) {
-      showCalendarView();
-  } else {
-      showPropertySelectionView();
-  }
- }else{
-  loginBox.style.display="block";
-  propertySelectBox.style.display="none";
-  calendarContainer.style.display="none";
-  logoutBtn.style.display="none";
-  copyReportBtn.style.display="none";
-  headerProperty.style.display="none";
- }
-});
-
-function showPropertySelectionView() {
-    propertySelectBox.style.display = "block";
-    calendarContainer.style.display = "none";
-    copyReportBtn.style.display = "none";
-    headerProperty.style.display = "none";
-}
-
-function showCalendarView() {
-    propertySelectBox.style.display = "none";
-    calendarContainer.style.display = "block";
-    copyReportBtn.style.display = "inline-flex";
-    
-    headerProperty.innerText = propertyNames[selectedProperty];
-    headerProperty.style.display = "inline-block";
-
-    if(!calendar) {
-        initCalendar();
-    } else {
-        calendar.render();
-        loadBookings();
-    }
-}
-
-document.getElementById("selectVagamonBtn").onclick = () => {
-    triggerFullscreen();
-    selectedProperty = "vagamon";
-    showCalendarView();
-};
-
-document.getElementById("selectMulavukadBtn").onclick = () => {
-    triggerFullscreen();
-    selectedProperty = "mulavukad";
-    showCalendarView();
-};
-
-document.getElementById("backToPropsBtn").onclick = () => {
-    if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = null;
-    }
-    selectedProperty = null;
-    showPropertySelectionView();
-};
-
-function roomsUsed(type){
- if(type==="Full Property") return 3;
- if(type==="2 Rooms") return 2;
- return 1;
-}
-
-function initCalendar(){
- const isMobile = window.innerWidth <= 600;
-
- calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-  initialView: isMobile ? 'listMonth' : 'dayGridMonth',
-  headerToolbar: {
-    left: 'prev,next today',
-    center: 'title',
-    right: 'dayGridMonth,listMonth'
-  },
-  buttonText: {
-    dayGridMonth: 'Grid',
-    listMonth: 'List'
-  },
-  height: 'auto',
-  handleWindowResize: true,
-  dateClick(info){
-   if(!auth.currentUser) return;
-   selectedDate=info.dateStr;
-   openModal("bookingModal");
-  },
-  eventClick(info){
-   const e=info.event.extendedProps;
-   selectedDoc=e.docId;
-   vDate.innerText=info.event.startStr;
-   vGuest.innerText=e.guestName;
-   vType.innerText=e.bookingType;
-   vBookedBy.innerText=e.bookedBy||"-";
-   vBookedOn.innerText=e.createdAt && e.createdAt.toDate ? e.createdAt.toDate().toLocaleString() : "-";
-   vAvailability.innerText=e.availability || "";
-   const user=auth.currentUser;
-   unblockBtn.style.display=(user.email===ADMIN_EMAIL || user.uid===e.userId) ? "inline-flex":"none";
-   openModal("viewModal");
-  }
- });
- calendar.render();
- loadBookings();
-}
-
-function loadBookings(){
- if (unsubscribeSnapshot) {
-     unsubscribeSnapshot();
- }
- if (!selectedProperty) return;
-
- unsubscribeSnapshot = onSnapshot(query(collection(db,"blockedDates")),snap=>{
-  calendar.removeAllEvents();
-  const dayTotals={};
-
-  snap.forEach(d=>{
-   const data=d.data();
-   const docProperty = data.property || "vagamon"; 
-   if(docProperty === selectedProperty) {
-       const used=roomsUsed(data.bookingType||"1 Room");
-       dayTotals[data.date]=(dayTotals[data.date]||0)+used;
-   }
-  });
-
-  snap.forEach(d=>{
-   const data=d.data();
-   const docProperty = data.property || "vagamon";
-   if(docProperty === selectedProperty) {
-       const remaining=Math.max(0,3-(dayTotals[data.date]||0));
-       calendar.addEvent({
-        title:`${String(data.bookingType)} - ${String(data.guestName)}`,
-        start:data.date,
-        allDay:true,
-        backgroundColor:getUserColor(data.bookedBy || ""),
-        textColor: "#ffffff",
-        docId:d.id,
-        guestName:data.guestName,
-        bookingType:data.bookingType,
-        bookedBy:data.bookedBy,
-        userId:data.userId,
-        createdAt:data.createdAt,
-        availability: remaining===0 ? "Fully Booked" : remaining+" room(s) available"
-       });
-   }
-  });
- });
-}
-
-saveBookingBtn.onclick = async () => {
-    saveBookingBtn.disabled = true;
-    try {
-        const user = auth.currentUser;
-        if (!selectedProperty) {
-            alert("No property selected.");
-            return;
-        }
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
-            alert("Invalid date.");
-            return;
-        }
-        const guest = guestNameInput.value.trim();
-        if(!/^[A-Za-z0-9 .'-]{2,50}$/.test(guest)){
-            alert("Invalid guest name.");
-            return;
-        }
-        const type = bookingTypeSelect.value;
-        const allowedTypes = ["Full Property", "1 Room", "2 Rooms"];
-        if (!allowedTypes.includes(type)) {
-            alert("Invalid booking type.");
-            return;
-        }
-
-        const requested = roomsUsed(type);
-        const countDocKey = `${selectedProperty}_${selectedDate}`;
-        const countDocRef = doc(db, "roomCounts", countDocKey);
-        const newBookingRef = doc(collection(db, "blockedDates"));
-
-        await runTransaction(db, async (transaction) => {
-            const countSnap = await transaction.get(countDocRef);
-            let currentUsed = 0;
-            if (countSnap.exists()) {
-                currentUsed = countSnap.data().totalRooms || 0;
-            }
-
-            if (currentUsed + requested > 3) {
-                throw new Error("Not enough rooms available.");
-            }
-
-            transaction.set(countDocRef, { totalRooms: currentUsed + requested }, { merge: true });
-            transaction.set(newBookingRef, {
-                property: selectedProperty,
-                date: selectedDate,
-                guestName: guest,
-                bookingType: type,
-                bookedBy: user.email,
-                userId: user.uid,
-                createdAt: serverTimestamp()
-            });
-        });
-
-        guestNameInput.value = "";
-        closeModal("bookingModal");
-    } catch (error) {
-        alert(error.message || "Unable to save booking.");
-        console.error(error);
-    } finally {
-        saveBookingBtn.disabled = false;
-    }
-};
-
-unblockBtn.onclick = async () => {
-    unblockBtn.disabled = true;
-    try {
-        const events = calendar.getEvents().filter(e => e.extendedProps.docId === selectedDoc);
-        if (events.length === 0) return;
-        
-        const targetEvent = events[0];
-        const targetDate = targetEvent.startStr;
-        const targetType = targetEvent.extendedProps.bookingType;
-        const roomsToFree = roomsUsed(targetType);
-
-        const countDocKey = `${selectedProperty}_${targetDate}`;
-        const countDocRef = doc(db, "roomCounts", countDocKey);
-        const bookingDocRef = doc(db, "blockedDates", selectedDoc);
-
-        await runTransaction(db, async (transaction) => {
-            const countSnap = await transaction.get(countDocRef);
-            let currentUsed = 0;
-            if (countSnap.exists()) {
-                currentUsed = countSnap.data().totalRooms || 0;
-            }
-
-            let newTotal = Math.max(0, currentUsed - roomsToFree);
-            transaction.set(countDocRef, { totalRooms: newTotal }, { merge: true });
-            transaction.delete(bookingDocRef);
-        });
-
-        closeModal("viewModal");
-    } catch (error) {
-        alert("Could not cancel booking safely.");
-        console.error(error);
-    } finally {
-        unblockBtn.disabled = false;
-    }
-};
-
-copyReportBtn.onclick = async () => {
-  try {
-    if (!calendar || !selectedProperty) return;
-
-    const currentViewDate = calendar.getDate(); 
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const currentMonthName = monthNames[currentViewDate.getMonth()];
-    const currentYear = currentViewDate.getFullYear();
-    const targetMonthYearStr = `${currentMonthName} ${currentYear}`;
-    const targetMonthStr = String(currentViewDate.getMonth() + 1).padStart(2, '0');
-
-    const events = calendar.getEvents()
-      .filter(e => {
-        const [year, month] = e.startStr.split('-');
-        return year === String(currentYear) && month === targetMonthStr;
-      })
-      .sort((a, b) => a.startStr.localeCompare(b.startStr));
-
-    const bookingLines = events.map(e => {
-      const [year, month, day] = e.startStr.split('-');
-      const formattedDate = `${day}/${month}/${year}`;
-      const type = e.extendedProps.bookingType || "1 Room";
-      const guest = e.extendedProps.guestName || "Guest";
-      return `${formattedDate} - ${type} - ${guest}`;
-    });
-
-    const now = new Date();
-    const genDay = String(now.getDate()).padStart(2, '0');
-    const genMonth = String(now.getMonth() + 1).padStart(2, '0');
-    const genYear = now.getFullYear();
-    let hours = now.getHours();
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'pm' : 'am';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    const genTime = `${genDay}/${genMonth}/${genYear} ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
-
-    const reportText = [
-      `Halom Casa Bookings (${propertyNames[selectedProperty]}) - ${targetMonthYearStr}\n`,
-      bookingLines.join('\n'),
-      `\nTotal Bookings: ${events.length}`,
-      `\nGenerated on: ${genTime}`
-    ].join('\n');
-
-    await navigator.clipboard.writeText(reportText);
-    const originalText = copyReportBtn.innerHTML;
-    copyReportBtn.innerHTML = "<span>Copied!</span>";
-    setTimeout(() => {
-        copyReportBtn.innerHTML = originalText;
-    }, 2000);
-  } catch (err) {
-    console.error("Failed to copy report: ", err);
-    alert("Could not copy report to clipboard.");
-  }
-};
-</script>
 </body>
 </html>
