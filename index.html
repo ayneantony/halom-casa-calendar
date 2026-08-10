@@ -3,157 +3,127 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=()">
+  <title>Halom Casa - Booking Calendar</title>
   
-  <!-- Hardened Content Security Policy -->
+  <!-- Modern Content Security Policy without frame-ancestors and allowing gstatic for source maps -->
   <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self';
-    base-uri 'self';
-    object-src 'none';
+    default-src 'self'; 
+    script-src 'self' 'unsafe-inline' https://www.gstatic.com; 
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
+    font-src 'self' https://fonts.gstatic.com; 
+    img-src 'self' data: https:; 
+    connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.googleapis.com wss://firestore.googleapis.com https://www.gstatic.com; 
+    object-src 'none'; 
+    base-uri 'self'; 
     form-action 'self';
-    frame-ancestors 'none';
-    upgrade-insecure-requests;
-    script-src 'self' https://www.gstatic.com https://cdn.jsdelivr.net;
-    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
-    img-src 'self' data: blob: https:;
-    font-src 'self' data: blob: https://fonts.gstatic.com;
-    connect-src 'self' 
-      https://firestore.googleapis.com 
-      https://identitytoolkit.googleapis.com 
-      https://securetoken.googleapis.com 
-      https://firebaseinstallations.googleapis.com 
-      https://www.googleapis.com 
-      wss://firestore.googleapis.com;
-    worker-src 'self' blob:;
-    manifest-src 'self';
   ">
 
-  <title>Halom Casa Booking System</title>
-
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
+  <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header>
-  <div class="header-brand">
-    <div class="shield-logo-icon" aria-hidden="true">HC</div>
-    <div class="header-brand-text">
-        <span class="brand-title">Halom</span>
-        <span class="brand-subtitle">Casa</span>
+  <header class="app-header">
+    <div class="logo-container">
+      <h1>Halom Casa</h1>
+      <span class="subtitle">Booking & Availability Calendar</span>
     </div>
-    <div id="headerProperty" style="display: none;"></div>
-  </div>
-  <div class="header-actions">
-    <select id="themeSelector" aria-label="Select Theme">
-        <option value="dark">Apex Dark</option>
-        <option value="light">Speed Light</option>
-    </select>
-    <button id="copyReportBtn" type="button" style="display:none;">Report</button>
-    <button id="logoutBtn" type="button" class="back-btn" style="display:none; margin:0;">Logout</button>
-  </div>
-</header>
-
-<main id="appContainer">
-  <!-- Login Container -->
-  <div id="loginBox">
-      <h2>Sign In</h2>
-      <form id="loginForm" onsubmit="return false;">
-        <input 
-          id="email" 
-          type="email" 
-          required
-          autocomplete="username" 
-          placeholder="Email address"
-          autocapitalize="none" 
-          autocorrect="off" 
-          spellcheck="false">
-        <input 
-          id="password" 
-          type="password" 
-          required
-          autocomplete="current-password" 
-          placeholder="Password"
-          autocapitalize="none" 
-          autocorrect="off" 
-          spellcheck="false">
-        <button id="loginBtn" type="submit" style="width:100%; margin-top:10px;">Log In</button>
-      </form>
-      <div id="loginMsg" role="alert" style="margin-top:12px; font-size:13px; font-weight:600; color: var(--accent-red);"></div>
-  </div>
-
-  <!-- Property Selection Box -->
-  <div id="propertySelectBox" style="display:none;">
-      <h2>Select Property</h2>
-      <div class="property-card">
-          <h3>Halom Casa - Vagamon</h3>
-          <button id="selectVagamonBtn" type="button" style="width:100%;">Select Property</button>
+    <div id="authContainer" class="auth-container">
+      <div id="userProfile" class="user-profile hidden">
+        <span id="userEmail"></span>
+        <button id="logoutBtn" class="btn btn-secondary">Logout</button>
       </div>
-      <div class="property-card">
-          <h3>Halom Casa - Mulavukad</h3>
-          <button id="selectMulavukadBtn" type="button" style="width:100%;">Select Property</button>
-      </div>
-      <div style="margin-top: 15px;">
-          <button id="propLogoutBtn" type="button" class="back-btn">Logout</button>
-      </div>
-  </div>
+      <button id="googleLoginBtn" class="btn btn-primary">Sign in with Google</button>
+    </div>
+  </header>
 
-  <!-- Calendar Interface -->
-  <div id="calendarContainer" style="display:none">
-      <button id="backToPropsBtn" type="button" class="back-btn">← Switch Property</button>
-      <div id="calendar"></div>
-  </div>
-</main>
+  <main class="main-content">
+    
+    <!-- Property Selector Tabs -->
+    <div class="property-tabs">
+      <button class="tab-btn active" data-property="vagamon">Vagamon Property</button>
+      <button class="tab-btn" data-property="mulavukad">Mulavukad Property</button>
+    </div>
 
-<!-- Booking Modal -->
-<div id="bookingModal" class="modal" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
-    <div class="modal-content">
-        <h3 id="modalTitle">New Booking</h3>
-        <input
-          id="guestName"
-          type="text"
-          placeholder="Guest Name"
-          maxlength="50"
-          autocomplete="off"
-          pattern="[A-Za-z0-9 .'-]{2,50}"
-          title="Letters, spaces, numbers and standard dashes only.">
-        <select id="bookingType" aria-label="Booking Type">
-          <option value="Full Property">Full Property</option>
-          <option value="1 Room">1 Room</option>
-          <option value="2 Rooms">2 Rooms</option>
-        </select>
-        <div style="display:flex; flex-direction:column; gap:8px; margin-top: 10px;">
-            <button id="saveBooking" type="button" style="width:100%;">Confirm Booking</button>
-            <button id="cancelBooking" type="button" class="back-btn" style="width:100%; margin:0;">Cancel</button>
+    <!-- Main Content Grid -->
+    <div class="dashboard-grid">
+      
+      <!-- Calendar View Container -->
+      <section class="card calendar-card">
+        <div class="calendar-header">
+          <button id="prevMonthBtn" class="btn-icon">&lt;</button>
+          <h2 id="currentMonthYear"></h2>
+          <button id="nextMonthBtn" class="btn-icon">&gt;</button>
         </div>
-    </div>
-</div>
-
-<!-- View Booking Modal -->
-<div id="viewModal" class="modal" role="dialog" aria-labelledby="viewModalTitle" aria-modal="true">
-    <div class="modal-content">
-        <h3 id="viewModalTitle">Booking Summary</h3>
-        <p><b>Date:</b> <span id="vDate"></span></p>
-        <p><b>Guest:</b> <span id="vGuest"></span></p>
-        <p><b>Type:</b> <span id="vType"></span></p>
-        <p><b>Booked By:</b> <span id="vBookedBy"></span></p>
-        <p><b>Booked On:</b> <span id="vBookedOn"></span></p>
-        <p><b>Availability:</b> <span id="vAvailability"></span></p>
-        <div style="display:flex; flex-direction:column; gap:8px; margin-top: 10px;">
-            <button id="unblockBtn" type="button" style="background: #ef4444; width:100%;">Remove Booking</button>
-            <button id="closeViewBtn" type="button" class="back-btn" style="width:100%; margin:0;">Close</button>
+        
+        <div class="calendar-weekdays">
+          <div>Sun</div>
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+          <div>Sat</div>
         </div>
+
+        <div id="calendarGrid" class="calendar-grid"></div>
+
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="color-box available"></span> Available</span>
+          <span class="legend-item"><span class="color-box partial"></span> Partially Booked</span>
+          <span class="legend-item"><span class="color-box booked"></span> Fully Booked</span>
+        </div>
+      </section>
+
+      <!-- Booking Form & Manager Side Panel -->
+      <section class="card form-card">
+        <h3>Reserve or Block Dates</h3>
+        <form id="bookingForm">
+          
+          <div class="form-group">
+            <label for="selectedDate">Selected Date</label>
+            <input type="date" id="selectedDate" required readonly>
+          </div>
+
+          <div class="form-group">
+            <label for="guestName">Guest / Booking Name</label>
+            <input type="text" id="guestName" placeholder="Enter guest name" required minlength="2" maxlength="50">
+          </div>
+
+          <div class="form-group">
+            <label for="bookingType">Booking Type</label>
+            <select id="bookingType" required>
+              <option value="1 Room">1 Room</option>
+              <option value="2 Rooms">2 Rooms</option>
+              <option value="Full Property">Full Property (3 Rooms)</option>
+            </select>
+          </div>
+
+          <button type="submit" id="submitBookingBtn" class="btn btn-action" disabled>
+            Login to Add Booking
+          </button>
+        </form>
+
+        <div id="statusMessage" class="status-message hidden"></div>
+
+        <!-- Bookings List for Selected Date -->
+        <div class="existing-bookings-container">
+          <h4>Bookings on Selected Date</h4>
+          <ul id="existingBookingsList" class="bookings-list">
+            <li class="empty-state">Select a date on the calendar to view details.</li>
+          </ul>
+        </div>
+      </section>
+
     </div>
-</div>
+  </main>
 
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
-<script type="module" src="app.js"></script>
-
+  <!-- Application Logic (Module) -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
