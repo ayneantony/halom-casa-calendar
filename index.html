@@ -16,6 +16,8 @@ style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdeli
 img-src 'self' data: blob: https:;
 font-src 'self' data: blob: https: https://fonts.gstatic.com;
 connect-src
+'self'
+https://www.gstatic.com
 https://firestore.googleapis.com
 https://identitytoolkit.googleapis.com
 https://securetoken.googleapis.com
@@ -37,9 +39,10 @@ geolocation=(),
 payment=(),
 usb=(),
 accelerometer=(),
-gyroscope=()
+gyroscope=(),
+fullscreen=(self)
 ">
-<title>Halom Casa Calendar </title>
+<title>Halom Casa Calendar</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.css" rel="stylesheet">
@@ -118,7 +121,7 @@ gyroscope=()
           placeholder="Guest Name"
           maxlength="50"
           autocomplete="off"
-          pattern="[A-Za-z0-9 .'-]{2,50}"
+          pattern="[A-Za-z0-9 .'\-]{2,50}"
           title="Letters, spaces, numbers and standard dashes only.">
         <select id="bookingType">
           <option value="Full Property">Full Property</option>
@@ -171,20 +174,12 @@ applyTheme(savedTheme);
 themeSelector.onchange = (e) => applyTheme(e.target.value);
 
 function triggerFullscreen() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch((err) => {
-            console.log("Fullscreen request error:", err.message);
+    if (document.fullscreenEnabled && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {
+            // Silently absorb restrictions when fullscreen is blocked by policy or missing gesture
         });
     }
 }
-
-window.addEventListener('DOMContentLoaded', () => {
-    triggerFullscreen();
-});
-
-document.body.addEventListener('click', () => {
-    triggerFullscreen();
-}, { once: true });
 
 const firebaseConfig = {
   apiKey: "AIzaSyCLeIhKV7wHeeTtJhKuCSJuoJwfr8Lqn54",
@@ -459,7 +454,7 @@ saveBookingBtn.onclick = async () => {
             return;
         }
         const guest = guestNameInput.value.trim();
-        if(!/^[A-Za-z0-9 .'-]{2,50}$/.test(guest)){
+        if(!/^[A-Za-z0-9 .'\-]{2,50}$/.test(guest)){
             alert("Invalid guest name.");
             return;
         }
