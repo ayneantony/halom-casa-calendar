@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Halom Casa - Booking Calendar</title>
   
-  <!-- Modern Content Security Policy without frame-ancestors and allowing gstatic for source maps -->
+  <!-- Content Security Policy -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self'; 
     script-src 'self' 'unsafe-inline' https://www.gstatic.com; 
@@ -29,16 +29,18 @@
 <body>
 
   <header class="app-header">
-    <div class="logo-container">
-      <h1>Halom Casa</h1>
-      <span class="subtitle">Booking & Availability Calendar</span>
-    </div>
-    <div id="authContainer" class="auth-container">
-      <div id="userProfile" class="user-profile hidden">
-        <span id="userEmail"></span>
-        <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+    <div class="header-container">
+      <div class="logo-container">
+        <h1>Halom Casa</h1>
+        <span class="subtitle">Booking & Availability Calendar</span>
       </div>
-      <button id="googleLoginBtn" class="btn btn-primary">Sign in with Google</button>
+      <div id="authContainer" class="auth-container">
+        <div id="userProfile" class="user-profile hidden">
+          <span id="userEmail"></span>
+          <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+        </div>
+        <button id="googleLoginBtn" class="btn btn-primary">Sign in with Google</button>
+      </div>
     </div>
   </header>
 
@@ -50,10 +52,10 @@
       <button class="tab-btn" data-property="mulavukad">Mulavukad Property</button>
     </div>
 
-    <!-- Main Content Grid -->
+    <!-- Main Grid -->
     <div class="dashboard-grid">
       
-      <!-- Calendar View Container -->
+      <!-- Calendar View -->
       <section class="card calendar-card">
         <div class="calendar-header">
           <button id="prevMonthBtn" class="btn-icon">&lt;</button>
@@ -80,7 +82,7 @@
         </div>
       </section>
 
-      <!-- Booking Form & Manager Side Panel -->
+      <!-- Booking Form & Details Side Panel -->
       <section class="card form-card">
         <h3>Reserve or Block Dates</h3>
         <form id="bookingForm">
@@ -111,7 +113,6 @@
 
         <div id="statusMessage" class="status-message hidden"></div>
 
-        <!-- Bookings List for Selected Date -->
         <div class="existing-bookings-container">
           <h4>Bookings on Selected Date</h4>
           <ul id="existingBookingsList" class="bookings-list">
@@ -123,7 +124,6 @@
     </div>
   </main>
 
-  <!-- Application Logic (Module) -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
